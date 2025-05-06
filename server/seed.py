@@ -1,6 +1,6 @@
 from faker import Faker
 from random import randint, choice as rc
-from models import db, User, Game, Player
+from models import db, User, Game, Player, Session
 from app import app
 
 if __name__ == '__main__':

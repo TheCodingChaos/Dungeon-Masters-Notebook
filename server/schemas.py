@@ -23,6 +23,7 @@ class GameSchema(ma.Schema):
     user_id = fields.Int(required=True)
     # Include nested players under each game
     players = fields.List(fields.Nested('PlayerSchema'), dump_only=True)
+    sessions = fields.List(fields.Nested('SessionSchema'), dump_only=True)
 
 class PlayerSchema(ma.Schema):
     id = fields.Int(dump_only=True)
@@ -32,3 +33,9 @@ class PlayerSchema(ma.Schema):
     user_id = fields.Int(required=True)
     # Characters will be nested here later
     characters = fields.List(fields.Nested('CharacterSchema'), dump_only=True)
+
+class SessionSchema(ma.Schema):
+    id = fields.Int(dump_only=True)
+    date = fields.Date(required=True)
+    summary = fields.Str(allow_none=True)
+    game_id = fields.Int(required=True)

@@ -61,6 +61,12 @@ class Game(db.Model):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+    sessions = db.relationship(
+        "Session",
+        back_populates="game",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
 
     def __repr__(self):
         return f'<Game id={self.id} title={self.title}>'
@@ -88,3 +94,20 @@ class Player(db.Model):
 
     def __repr__(self):
         return f'<Player id={self.id} name={self.name}>'
+
+class Session(db.Model):
+    __tablename__ = 'sessions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    summary = db.Column(db.Text, nullable=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
+
+    game = db.relationship(
+        "Game",
+        back_populates="sessions",
+        lazy="selectin"
+    )
+
+    def __repr__(self):
+        return f'<Session id={self.id} date={self.date}>'
