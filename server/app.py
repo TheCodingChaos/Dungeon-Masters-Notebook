@@ -1,9 +1,14 @@
+from datetime import datetime
 from flask import request, session, make_response
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 from config import app, db, api
-from models import User
-from schemas import UserSchema
+from models import User, Game
+from schemas import UserSchema, GameSchema
+from marshmallow import ValidationError
+
+game_schema = GameSchema()
+games_schema = GameSchema(many=True)
 
 
 @app.before_request
@@ -65,10 +70,54 @@ class Logout(Resource):
         session['user_id'] = None
         return {}, 204
 
+
+
+# --- Game resources ---
+class NewGame(Resource):
+    def get(self):
+        user_id = session.get('user_id')
+        games = Game.query.filter_by(user_id=user_id).all()
+        return games_schema.dump(games), 200
+
+    def post(self):
+        data = request.get_json()
+        data['user_id'] = session.get('user_id')
+        try:
+            loaded = game_schema.load(data)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        new_game = Game(**loaded)
+        db.session.add(new_game)
+        db.session.commit()
+        return game_schema.dump(new_game), 201
+
+class EditGame(Resource):
+    def patch(self, game_id):
+        game = Game.query.get_or_404(game_id)
+        updates = request.get_json()
+        try:
+            loaded_updates = game_schema.load(updates, partial=True)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        for key, value in loaded_updates.items():
+            setattr(game, key, value)
+        db.session.commit()
+        return game_schema.dump(game), 200
+
+    def delete(self, game_id):
+        game = Game.query.get_or_404(game_id)
+        db.session.delete(game)
+        db.session.commit()
+        return '', 204
+
+
+# Register RESTful resources
 api.add_resource(Signup, '/signup')
 api.add_resource(Login, '/login')
 api.add_resource(CheckSession, '/check_session')
 api.add_resource(Logout, '/logout')
+api.add_resource(NewGame, '/games')
+api.add_resource(EditGame, '/games/<int:game_id>')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
