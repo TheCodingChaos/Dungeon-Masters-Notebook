@@ -3,12 +3,13 @@ from flask import request, session, make_response
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 from config import app, db, api
-from models import User, Game
-from schemas import UserSchema, GameSchema
+from models import User, Game, Player
+from schemas import UserSchema, GameSchema, PlayerSchema
 from marshmallow import ValidationError
 
 game_schema = GameSchema()
 games_schema = GameSchema(many=True)
+player_schema = PlayerSchema()
 
 
 @app.before_request
@@ -110,6 +111,49 @@ class EditGame(Resource):
         db.session.commit()
         return '', 204
 
+class NewPlayer(Resource):
+    def post(self, game_id):
+        # Ensure the game belongs to the logged-in user
+        game = Game.query.get_or_404(game_id)
+        if game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
+        # Load and validate input
+        data = request.get_json()
+        data['game_id'] = game_id
+        data['user_id'] = session.get('user_id')
+        try:
+            loaded = player_schema.load(data)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        new_player = Player(**loaded)
+        db.session.add(new_player)
+        db.session.commit()
+        return player_schema.dump(new_player), 201
+
+
+class EditPlayer(Resource):
+    def patch(self, player_id):
+        player = Player.query.get_or_404(player_id)
+        if player.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
+        updates = request.get_json()
+        try:
+            loaded_updates = player_schema.load(updates, partial=True)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        for key, value in loaded_updates.items():
+            setattr(player, key, value)
+        db.session.commit()
+        return player_schema.dump(player), 200
+
+    def delete(self, player_id):
+        player = Player.query.get_or_404(player_id)
+        if player.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
+        db.session.delete(player)
+        db.session.commit()
+        return '', 204
+
 
 # Register RESTful resources
 api.add_resource(Signup, '/signup')
@@ -118,6 +162,8 @@ api.add_resource(CheckSession, '/check_session')
 api.add_resource(Logout, '/logout')
 api.add_resource(NewGame, '/games')
 api.add_resource(EditGame, '/games/<int:game_id>')
+api.add_resource(NewPlayer, '/games/<int:game_id>/players')
+api.add_resource(EditPlayer, '/players/<int:player_id>')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

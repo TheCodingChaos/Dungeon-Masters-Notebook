@@ -1,6 +1,6 @@
 from faker import Faker
 from random import randint, choice as rc
-from models import db, User, Game
+from models import db, User, Game, Player
 from app import app
 
 if __name__ == '__main__':
@@ -54,3 +54,19 @@ if __name__ == '__main__':
         db.session.add_all(games)
         db.session.commit()
         print(f"Seeded {len(games)} games!")
+
+        print("Creating players...")
+        players = []
+        for game in games:
+            num_players = randint(1, 4)
+            for _ in range(num_players):
+                player = Player(
+                    name=fake.name(),
+                    summary=fake.sentence(nb_words=12),
+                    game_id=game.id,
+                    user_id=game.user_id
+                )
+                players.append(player)
+        db.session.add_all(players)
+        db.session.commit()
+        print(f"Seeded {len(players)} players!")

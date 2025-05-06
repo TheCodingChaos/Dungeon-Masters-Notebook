@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_restful import Api
@@ -37,4 +37,6 @@ ma = Marshmallow(app)
 
 @app.errorhandler(404)
 def not_found(e):
+    if request.accept_mimetypes.accept_json:
+        return {'error': 'Not found.'}, 404
     return render_template("index.html")

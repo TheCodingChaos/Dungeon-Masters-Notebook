@@ -1,7 +1,7 @@
 
 import React, { useContext, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import NewPlayer from "../components/NewPlayer";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
@@ -11,6 +11,7 @@ function GamePage() {
   const { sessionData, setSessionData } = useContext(SessionContext);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
   const EditGameSchema = Yup.object({
     title: Yup.string().required("Required"),
     system: Yup.string().required("Required"),
@@ -19,7 +20,7 @@ function GamePage() {
     start_date: Yup.date().nullable(),
     setting: Yup.string(),
   });
-  const game = sessionData.user?.games.find(
+  const game = sessionData.user?.games?.find(
     (g) => g.id === parseInt(gameId, 10)
   );
 
@@ -124,6 +125,30 @@ function GamePage() {
       {game.start_date && (<p><strong>Start Date:</strong> {game.start_date}</p>)}
       {game.setting && (<p><strong>Setting:</strong> {game.setting}</p>)}
       <p><strong>Status:</strong> {game.status}</p>
+      <div style={{ marginTop: "1rem" }}>
+        <h3>Players</h3>
+        <button onClick={() => setShowPlayerForm(!showPlayerForm)}>
+          {showPlayerForm ? "Cancel" : "+ New Player"}
+        </button>
+        {showPlayerForm && (
+          <div style={{ margin: "1rem 0" }}>
+            <NewPlayer
+              gameId={game.id}
+              onSuccess={() => setShowPlayerForm(false)}
+            />
+          </div>
+        )}
+        <ul>
+          {game.players && game.players.map(player => (
+            <li key={player.id}>
+              <Link to={`/players/${player.id}`}>{player.name}</Link>
+            </li>
+          ))}
+          {(!game.players || game.players.length === 0) && (
+            <li>No players yet</li>
+          )}
+        </ul>
+      </div>
       <div style={{ marginTop: "1rem" }}>
         <button onClick={() => setIsEditing(true)}>Edit</button>
         <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }}>Delete</button>

@@ -1,9 +1,6 @@
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
-from marshmallow import pre_dump
-import re
-import datetime
 
 from config import db, bcrypt, ma
 
@@ -68,12 +65,13 @@ class Game(db.Model):
     def __repr__(self):
         return f'<Game id={self.id} title={self.title}>'
 
-# --- Player model ---
+##needs to be fixed when character is created
 class Player(db.Model):
     __tablename__ = 'players'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    summary = db.Column(db.Text, nullable=True)
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
