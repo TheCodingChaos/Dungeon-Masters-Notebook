@@ -14,7 +14,7 @@ function NavBar() {
       .then((r) => {
         if (r.ok) {
           setSessionData(prev => ({...prev, user:null }));
-          navigate("/login");
+          navigate("/");
         }
       });
   };

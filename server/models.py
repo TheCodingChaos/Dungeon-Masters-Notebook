@@ -25,3 +25,22 @@ class User(db.Model):
 
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
+
+
+# --- Game model ---
+class Game(db.Model):
+    __tablename__ = 'games'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    system = db.Column(db.String(100), nullable=False)
+    start_date = db.Column(db.Date, nullable=True)
+    setting = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(50), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=db.backref('games', lazy=True))
+
+    def __repr__(self):
+        return f'<Game id={self.id} title={self.title}>'
