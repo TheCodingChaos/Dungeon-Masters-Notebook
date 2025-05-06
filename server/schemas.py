@@ -21,3 +21,15 @@ class GameSchema(ma.Schema):
     setting = fields.Str(allow_none=True)
     status = fields.Str(required=True)
     user_id = fields.Int(required=True)
+    # Include nested players under each game
+    players = fields.List(fields.Nested('PlayerSchema'), dump_only=True)
+
+
+# --- Player schema ---
+class PlayerSchema(ma.Schema):
+    id = fields.Int(dump_only=True)
+    name = fields.Str(required=True, validate=validate.Length(min=1))
+    game_id = fields.Int(required=True)
+    user_id = fields.Int(required=True)
+    # Characters will be nested here later
+    characters = fields.List(fields.Nested('CharacterSchema'), dump_only=True)
