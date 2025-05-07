@@ -1,5 +1,5 @@
 from config import ma
-from marshmallow import Schema, fields, validate, pre_load
+from marshmallow import fields, validate, pre_load
 
 class UserSchema(ma.Schema):
     id = fields.Int(dump_only=True)

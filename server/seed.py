@@ -7,6 +7,10 @@ if __name__ == '__main__':
     fake = Faker()
     with app.app_context():
         print("Deleting old data...")
+        # Clear all tables in dependency order to honor FKs
+        Session.query.delete()
+        Player.query.delete()
+        Game.query.delete()
         User.query.delete()
         db.session.commit()
 
@@ -70,3 +74,22 @@ if __name__ == '__main__':
         db.session.add_all(players)
         db.session.commit()
         print(f"Seeded {len(players)} players!")
+
+        print("Creating sessions...")
+        sessions = []
+        for game in games:
+            # Create 1–5 sessions per game
+            num_sessions = randint(1, 5)
+            for _ in range(num_sessions):
+                # Use the game’s start_date as the earliest, or default to one year ago
+                start = game.start_date or "-1y"
+                session_date = fake.date_between(start_date=start, end_date="today")
+                session_obj = Session(
+                    date=session_date,
+                    summary=fake.text(max_nb_chars=100),
+                    game_id=game.id
+                )
+                sessions.append(session_obj)
+        db.session.add_all(sessions)
+        db.session.commit()
+        print(f"Seeded {len(sessions)} sessions!")
