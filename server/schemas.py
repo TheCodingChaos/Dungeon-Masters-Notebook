@@ -10,6 +10,12 @@ class UserSchema(ma.SQLAlchemySchema):
         include_fk = True
     id = ma.auto_field(dump_only=True)
     username = ma.auto_field(required=True)
+    # Include the user’s global players
+    players = fields.List(
+        fields.Nested('PlayerSchema', exclude=('games','characters')),
+        dump_only=True
+    )
+    # Include full game details, with nested players->characters and sessions
     games = fields.List(fields.Nested('GameSchema'), dump_only=True)
 
 class GameSchema(ma.SQLAlchemySchema):
@@ -44,8 +50,7 @@ class PlayerSchema(ma.SQLAlchemySchema):
     id = ma.auto_field(dump_only=True)
     name = ma.auto_field(required=True)
     summary = ma.auto_field()
-    user_id = ma.auto_field()
-    games = fields.List(fields.Nested('GameSchema'), dump_only=True)
+    # Removed games field to prevent recursion
     characters = fields.List(fields.Nested('CharacterSchema'), dump_only=True)
 
 class SessionSchema(ma.SQLAlchemySchema):

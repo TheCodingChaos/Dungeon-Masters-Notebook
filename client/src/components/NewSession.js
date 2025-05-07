@@ -11,7 +11,7 @@ const NewSessionSchema = Yup.object({
 });
 
 export default function NewSession({ gameId, onSuccess }) {
-  const { sessionData, setSessionData } = useContext(SessionContext);
+  const { setSessionData } = useContext(SessionContext);
 
   return (
     <Formik

@@ -19,12 +19,8 @@ class User(db.Model):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
-    players = db.relationship(
-        "Player",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin"
-    )
+    # Players accessible via games → characters
+    players = association_proxy("games", "players")
 
     @hybrid_property
     def password_hash(self):
@@ -70,8 +66,12 @@ class Game(db.Model):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
-    # Players participating in this game via characters
-    players = association_proxy('characters', 'player')
+    # Public players list, derived through those characters
+    players = association_proxy(
+        "characters",
+        "player",
+        creator=lambda player_obj: Character(player=player_obj)
+    )
 
     def __repr__(self):
         return f'<Game id={self.id} title={self.title}>'
@@ -83,13 +83,7 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     summary = db.Column(db.Text, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
-    user = db.relationship(
-        "User",
-        back_populates="players",
-        lazy="selectin"
-    )
+    # user_id and user relationship removed
     # Characters associated with this player
     characters = db.relationship(
         "Character",
@@ -98,7 +92,11 @@ class Player(db.Model):
         lazy="selectin"
     )
     # Games this player is involved in via characters
-    games = association_proxy('characters', 'game')
+    games = association_proxy(
+        'characters',
+        'game',
+        creator=lambda game_obj: Character(game=game_obj)
+    )
 
     def __repr__(self):
         return f'<Player id={self.id} name={self.name}>'

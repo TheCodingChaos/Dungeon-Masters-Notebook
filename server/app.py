@@ -2,15 +2,16 @@ from flask import request, session
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError
 from config import app, db, api
-from models import User, Game, Player, Session
-from schemas import UserSchema, GameSchema, PlayerSchema
-from schemas import SessionSchema
+from models import User, Game, Player, Session, Character
+from schemas import UserSchema, GameSchema, PlayerSchema, SessionSchema, CharacterSchema
 from marshmallow import ValidationError
 
 game_schema = GameSchema()
 games_schema = GameSchema(many=True)
 player_schema = PlayerSchema()
 session_schema = SessionSchema()
+character_schema = CharacterSchema()
+characters_schema = CharacterSchema(many=True)
 
 
 
@@ -113,8 +114,6 @@ class NewPlayer(Resource):
         if game.user_id != session.get('user_id'):
             return {'error': '401 unauthorized'}, 401
         data = request.get_json()
-        data['game_id'] = game_id
-        data['user_id'] = session.get('user_id')
         try:
             loaded = player_schema.load(data)
         except ValidationError as err:
@@ -127,8 +126,6 @@ class NewPlayer(Resource):
 class EditPlayer(Resource):
     def patch(self, player_id):
         player = Player.query.get_or_404(player_id)
-        if player.user_id != session.get('user_id'):
-            return {'error': '401 unauthorized'}, 401
         updates = request.get_json()
         try:
             loaded_updates = player_schema.load(updates, partial=True)
@@ -141,8 +138,6 @@ class EditPlayer(Resource):
 
     def delete(self, player_id):
         player = Player.query.get_or_404(player_id)
-        if player.user_id != session.get('user_id'):
-            return {'error': '401 unauthorized'}, 401
         db.session.delete(player)
         db.session.commit()
         return '', 204
@@ -186,6 +181,39 @@ class EditSession(Resource):
         db.session.commit()
         return '', 204
 
+class NewCharacter(Resource):
+    def post(self, player_id):
+        player = Player.query.get_or_404(player_id)
+        data = request.get_json()
+        data['player_id'] = player_id
+        try:
+            loaded = character_schema.load(data)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        new_char = Character(**loaded)
+        db.session.add(new_char)
+        db.session.commit()
+        return character_schema.dump(new_char), 201
+    
+class EditCharacter(Resource):
+    def patch(self, character_id):
+        char = Character.query.get_or_404(character_id)
+        updates = request.get_json()
+        try:
+            loaded = character_schema.load(updates, partial=True)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        for key, value in loaded.items():
+            setattr(char, key, value)
+        db.session.commit()
+        return character_schema.dump(char), 200
+    
+    def delete(self, character_id):
+        char = Character.query.get_or_404(character_id)
+        db.session.delete(char)
+        db.session.commit()
+        return '', 204
+
 
 # Register RESTful resources
 api.add_resource(Signup, '/signup')
@@ -198,6 +226,8 @@ api.add_resource(NewPlayer, '/games/<int:game_id>/players')
 api.add_resource(EditPlayer, '/players/<int:player_id>')
 api.add_resource(NewSession, '/games/<int:game_id>/sessions')
 api.add_resource(EditSession, '/sessions/<int:session_id>')
+api.add_resource(NewCharacter, '/players/<int:player_id>/characters')
+api.add_resource(EditCharacter, '/characters/<int:character_id>')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

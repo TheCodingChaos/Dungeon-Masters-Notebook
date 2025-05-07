@@ -1,9 +1,8 @@
 
 
-import React, { useContext } from "react";
+import React from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
-import { SessionContext } from "../contexts/SessionContext";
 
 const NewGameSchema = Yup.object({
   title: Yup.string().required("Title is required"),
@@ -15,8 +14,6 @@ const NewGameSchema = Yup.object({
 });
 
 export default function NewGame({ onSuccess }) {
-  const { sessionData, setSessionData } = useContext(SessionContext);
-
   return (
     <Formik
       initialValues={{
@@ -43,15 +40,8 @@ export default function NewGame({ onSuccess }) {
             throw new Error(err.error || "Failed to create game");
           }
           const newGame = await res.json();
-          setSessionData(prev => ({
-            ...prev,
-            user: {
-              ...prev.user,
-              games: [...(prev.user.games || []), newGame]
-            }
-          }));
           resetForm();
-          if (onSuccess) onSuccess();
+          if (onSuccess) onSuccess(newGame);
         } catch (e) {
           setErrors({ server: e.message });
         } finally {

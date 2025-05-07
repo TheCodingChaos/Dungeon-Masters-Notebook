@@ -17,26 +17,34 @@ function Signup() {
     <Formik
       initialValues={{ username: "", password: "" }}
       validationSchema={SignupSchema}
-      onSubmit={(values, { setSubmitting, setErrors }) => {
-        fetch("/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
-          credentials: "include"
-        })
-          .then((r) => {
-            if (r.ok) {
-              r.json().then((user) => {
-                setSessionData(prev => ({ ...prev, user }));
-                navigate("/dashboard");
-              });
+      onSubmit={async (values, { setSubmitting, setErrors }) => {
+        try {
+          const response = await fetch("/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(values),
+            credentials: "include"
+          });
+          if (!response.ok) {
+            const err = await response.json();
+            setErrors({ server: err.error });
+          } else {
+            // Fetch full session data after signup
+            const sessionRes = await fetch("/check_session", { credentials: "include" });
+            if (sessionRes.ok) {
+              const sessionUser = await sessionRes.json();
+              setSessionData(prev => ({ ...prev, user: sessionUser }));
+              navigate("/dashboard");
             } else {
-              r.json().then((err) =>
-                setErrors({ server: err.error })
-              );
+              const err2 = await sessionRes.json();
+              setErrors({ server: err2.error || "Session fetch failed" });
             }
-          })
-          .finally(() => setSubmitting(false));
+          }
+        } catch (e) {
+          setErrors({ server: e.message });
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
       {({ isSubmitting, errors }) => (

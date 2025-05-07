@@ -128,8 +128,15 @@ function GamePage() {
   }
 
   // Players list and form toggle logic
-  const playerItems = game.players?.length
-    ? game.players.map(player => (
+  const playersList = Array.isArray(game.players)
+    ? game.players.filter(player => player != null)
+    : [];
+  // Remove duplicate players
+  const uniquePlayers = playersList.filter(
+    (p, i, arr) => arr.findIndex(x => x.id === p.id) === i
+  );
+  const playerItems = uniquePlayers.length > 0
+    ? uniquePlayers.map(player => (
         <li key={player.id}>
           <Link to={`/players/${player.id}`}>{player.name}</Link>
         </li>
@@ -145,8 +152,11 @@ function GamePage() {
   const playerToggleLabel = showPlayerForm ? "Cancel" : "+ New Player";
 
   // Sessions list and form toggle logic
-  const sessionItems = game.sessions?.length
-    ? game.sessions.map(sess => (
+  const sessionsList = Array.isArray(game.sessions)
+    ? game.sessions.filter(s => s != null)
+    : [];
+  const sessionItems = sessionsList.length > 0
+    ? sessionsList.map(sess => (
         <li key={sess.id}>
           <Link to={`/sessions/${sess.id}`}>
             {formatDate(sess.date)}{sess.summary ? `: ${sess.summary}` : ""}

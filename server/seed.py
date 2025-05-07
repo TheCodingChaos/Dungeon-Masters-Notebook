@@ -61,15 +61,16 @@ if __name__ == '__main__':
 
         print("Creating players...")
         players = []
+        game_players_map = {}
         for game in games:
             num_players = randint(1, 4)
             for _ in range(num_players):
                 player = Player(
                     name=fake.name(),
-                    summary=fake.sentence(nb_words=12),
-                    user_id=game.user_id
+                    summary=fake.sentence(nb_words=12)
                 )
                 players.append(player)
+                game_players_map.setdefault(game.id, []).append(player)
         db.session.add_all(players)
         db.session.commit()
         print(f"Seeded {len(players)} players!")
@@ -94,11 +95,10 @@ if __name__ == '__main__':
 
         print("Creating characters...")
         characters = []
-        for player in players:
-            user_game_ids = [g.id for g in games if g.user_id == player.user_id]
-            num_chars = randint(0, 3)
-            for _ in range(num_chars):
-                chosen_game_id = rc(user_game_ids) if user_game_ids else None
+        for game_id, plist in game_players_map.items():
+            num_chars_total = randint(1, len(plist) * 2)
+            for _ in range(num_chars_total):
+                player = rc(plist)
                 char = Character(
                     name=fake.name(),
                     character_class=rc([
@@ -109,7 +109,7 @@ if __name__ == '__main__':
                     icon=fake.image_url(),
                     is_active=rc([True, False]),
                     player_id=player.id,
-                    game_id=chosen_game_id
+                    game_id=game_id
                 )
                 characters.append(char)
         db.session.add_all(characters)
