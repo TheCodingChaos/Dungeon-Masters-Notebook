@@ -29,8 +29,9 @@ class PlayerSchema(ma.Schema):
     id = fields.Int(dump_only=True)
     name = fields.Str(required=True, validate=validate.Length(min=1))
     summary = fields.Str(allow_none=True)
-    game_id = fields.Int(required=True)
     user_id = fields.Int(required=True)
+    # Include games this player is in, via characters
+    games = fields.List(fields.Nested('GameSchema'), dump_only=True)
     # Characters will be nested here later
     characters = fields.List(fields.Nested('CharacterSchema'), dump_only=True)
 
