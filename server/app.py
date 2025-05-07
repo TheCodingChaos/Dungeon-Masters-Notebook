@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import request, session
 from flask_restful import Resource
 from sqlalchemy.exc import IntegrityError

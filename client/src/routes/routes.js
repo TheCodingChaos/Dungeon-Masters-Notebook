@@ -6,6 +6,7 @@ import Dashboard from "../pages/Dashboard";
 import GamePage from "../pages/GamePage";
 import PlayerPage from "../pages/PlayerPage";
 import CharacterPage from "../pages/CharacterPage";
+import SessionPage from "../pages/SessionPage";
 import { Routes, Route } from "react-router-dom";
 import Login from "../components/Login";
 import Signup from "../components/Signup";
@@ -49,6 +50,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <PlayerPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions/:sessionId"
+        element={
+          <ProtectedRoute>
+            <SessionPage />
           </ProtectedRoute>
         }
       />

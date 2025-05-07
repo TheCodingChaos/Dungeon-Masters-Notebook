@@ -2,9 +2,20 @@
 import React, { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import NewPlayer from "../components/NewPlayer";
+import NewSession from "../components/NewSession";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
+
+// Helper to format ISO date strings as "MMM DD, YYYY"
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric"
+  });
+};
 
 function GamePage() {
   const { gameId } = useParams();
@@ -12,6 +23,7 @@ function GamePage() {
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
   const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [showSessionForm, setShowSessionForm] = useState(false);
   const EditGameSchema = Yup.object({
     title: Yup.string().required("Required"),
     system: Yup.string().required("Required"),
@@ -115,6 +127,42 @@ function GamePage() {
     );
   }
 
+  // Players list and form toggle logic
+  const playerItems = game.players?.length
+    ? game.players.map(player => (
+        <li key={player.id}>
+          <Link to={`/players/${player.id}`}>{player.name}</Link>
+        </li>
+      ))
+    : <li>No players yet</li>;
+
+  const playerFormElement = showPlayerForm && (
+    <div style={{ margin: "1rem 0" }}>
+      <NewPlayer gameId={game.id} onSuccess={() => setShowPlayerForm(false)} />
+    </div>
+  );
+
+  const playerToggleLabel = showPlayerForm ? "Cancel" : "+ New Player";
+
+  // Sessions list and form toggle logic
+  const sessionItems = game.sessions?.length
+    ? game.sessions.map(sess => (
+        <li key={sess.id}>
+          <Link to={`/sessions/${sess.id}`}>
+            {formatDate(sess.date)}{sess.summary ? `: ${sess.summary}` : ""}
+          </Link>
+        </li>
+      ))
+    : <li>No sessions yet</li>;
+
+  const sessionFormElement = showSessionForm && (
+    <div style={{ margin: "1rem 0" }}>
+      <NewSession gameId={game.id} onSuccess={() => setShowSessionForm(false)} />
+    </div>
+  );
+
+  const sessionToggleLabel = showSessionForm ? "Cancel" : "+ New Session";
+
   // DETAIL VIEW
   return (
     <div>
@@ -122,32 +170,24 @@ function GamePage() {
       <h1>{game.title}</h1>
       <p><strong>System:</strong> {game.system}</p>
       {game.description && (<p><strong>Description:</strong> {game.description}</p>)}
-      {game.start_date && (<p><strong>Start Date:</strong> {game.start_date}</p>)}
+      {game.start_date && (<p><strong>Start Date:</strong> {formatDate(game.start_date)}</p>)}
       {game.setting && (<p><strong>Setting:</strong> {game.setting}</p>)}
       <p><strong>Status:</strong> {game.status}</p>
       <div style={{ marginTop: "1rem" }}>
         <h3>Players</h3>
         <button onClick={() => setShowPlayerForm(!showPlayerForm)}>
-          {showPlayerForm ? "Cancel" : "+ New Player"}
+          {playerToggleLabel}
         </button>
-        {showPlayerForm && (
-          <div style={{ margin: "1rem 0" }}>
-            <NewPlayer
-              gameId={game.id}
-              onSuccess={() => setShowPlayerForm(false)}
-            />
-          </div>
-        )}
-        <ul>
-          {game.players && game.players.map(player => (
-            <li key={player.id}>
-              <Link to={`/players/${player.id}`}>{player.name}</Link>
-            </li>
-          ))}
-          {(!game.players || game.players.length === 0) && (
-            <li>No players yet</li>
-          )}
-        </ul>
+        {playerFormElement}
+        <ul>{playerItems}</ul>
+      </div>
+      <div style={{ marginTop: "1rem" }}>
+        <h3>Sessions</h3>
+        <button onClick={() => setShowSessionForm(!showSessionForm)}>
+          {sessionToggleLabel}
+        </button>
+        {sessionFormElement}
+        <ul>{sessionItems}</ul>
       </div>
       <div style={{ marginTop: "1rem" }}>
         <button onClick={() => setIsEditing(true)}>Edit</button>

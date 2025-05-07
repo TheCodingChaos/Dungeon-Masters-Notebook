@@ -6,6 +6,16 @@ import { SessionContext } from "../contexts/SessionContext";
 import NewGame from "../components/NewGame";
 import NewPlayer from "../components/NewPlayer";
 
+// Helper to format ISO date strings as "MMM DD, YYYY"
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric"
+  });
+};
+
 function Dashboard() {
   const { sessionData } = useContext(SessionContext);
   const games = sessionData.user?.games || [];
@@ -20,7 +30,7 @@ function Dashboard() {
         <h2>{game.title}</h2>
         <p><strong>System:</strong> {game.system}</p>
         {game.start_date && (
-          <p><strong>Start Date:</strong> {game.start_date}</p>
+          <p><strong>Start Date:</strong> {formatDate(game.start_date)}</p>
         )}
         <ul>
           {game.players?.length
