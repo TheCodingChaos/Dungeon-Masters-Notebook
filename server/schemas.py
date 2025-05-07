@@ -1,42 +1,75 @@
-from config import ma
+from config import ma, db
 from marshmallow import fields, validate, pre_load
+from models import User, Game, Player, Session, Character
 
-class UserSchema(ma.Schema):
-    id = fields.Int(dump_only=True)
-    username = fields.Str(required=True, validate=validate.Length(min=3))
+class UserSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = User
+        sqla_session = db.session
+        include_relationships = True
+        include_fk = True
+    id = ma.auto_field(dump_only=True)
+    username = ma.auto_field(required=True)
     games = fields.List(fields.Nested('GameSchema'), dump_only=True)
 
-class GameSchema(ma.Schema):
+class GameSchema(ma.SQLAlchemySchema):
     @pre_load
     def fix_empty_date(self, data, **kwargs):
-        # Convert empty start_date strings to None so Date field accepts them
         if data.get("start_date", None) == "":
             data["start_date"] = None
         return data
-    id = fields.Int(dump_only=True)
-    title = fields.Str(required=True, validate=validate.Length(min=1))
-    description = fields.Str()
-    system = fields.Str(required=True, validate=validate.Length(min=1))
-    start_date = fields.Date(allow_none=True)
-    setting = fields.Str(allow_none=True)
-    status = fields.Str(required=True)
-    user_id = fields.Int(required=True)
-    # Include nested players under each game
+
+    class Meta:
+        model = Game
+        sqla_session = db.session
+        include_relationships = True
+        include_fk = True
+    id = ma.auto_field(dump_only=True)
+    title = ma.auto_field(required=True)
+    description = ma.auto_field()
+    system = ma.auto_field(required=True)
+    start_date = ma.auto_field()
+    setting = ma.auto_field()
+    status = ma.auto_field(required=True)
+    user_id = ma.auto_field()
     players = fields.List(fields.Nested('PlayerSchema'), dump_only=True)
     sessions = fields.List(fields.Nested('SessionSchema'), dump_only=True)
 
-class PlayerSchema(ma.Schema):
-    id = fields.Int(dump_only=True)
-    name = fields.Str(required=True, validate=validate.Length(min=1))
-    summary = fields.Str(allow_none=True)
-    user_id = fields.Int(required=True)
-    # Include games this player is in, via characters
+class PlayerSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Player
+        sqla_session = db.session
+        include_relationships = True
+        include_fk = True
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(required=True)
+    summary = ma.auto_field()
+    user_id = ma.auto_field()
     games = fields.List(fields.Nested('GameSchema'), dump_only=True)
-    # Characters will be nested here later
     characters = fields.List(fields.Nested('CharacterSchema'), dump_only=True)
 
-class SessionSchema(ma.Schema):
-    id = fields.Int(dump_only=True)
-    date = fields.Date(required=True)
-    summary = fields.Str(allow_none=True)
-    game_id = fields.Int(required=True)
+class SessionSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Session
+        sqla_session = db.session
+        include_relationships = False
+        include_fk = True
+    id = ma.auto_field(dump_only=True)
+    date = ma.auto_field(required=True)
+    summary = ma.auto_field()
+    game_id = ma.auto_field()
+
+class CharacterSchema(ma.SQLAlchemySchema):
+    class Meta:
+        model = Character
+        sqla_session = db.session
+        include_relationships = True
+        include_fk = True
+    id = ma.auto_field(dump_only=True)
+    name = ma.auto_field(required=True)
+    character_class = ma.auto_field(required=True)
+    level = ma.auto_field(required=True)
+    icon = ma.auto_field()
+    is_active = ma.auto_field()
+    player_id = ma.auto_field()
+    game_id = ma.auto_field()

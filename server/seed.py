@@ -1,6 +1,6 @@
 from faker import Faker
 from random import randint, choice as rc
-from models import db, User, Game, Player, Session
+from models import db, User, Game, Player, Session, Character
 from app import app
 
 if __name__ == '__main__':
@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
         db.session.add_all(users)
         db.session.commit()
-        print("Seeded users!")
+        print(f"Seeded {len(users)} users!")
 
         print("Creating games...")
         systems = [
@@ -67,7 +67,6 @@ if __name__ == '__main__':
                 player = Player(
                     name=fake.name(),
                     summary=fake.sentence(nb_words=12),
-                    game_id=game.id,
                     user_id=game.user_id
                 )
                 players.append(player)
@@ -78,7 +77,6 @@ if __name__ == '__main__':
         print("Creating sessions...")
         sessions = []
         for game in games:
-            # Create 1–5 sessions per game
             num_sessions = randint(1, 5)
             for _ in range(num_sessions):
                 # Use the game’s start_date as the earliest, or default to one year ago
@@ -93,3 +91,27 @@ if __name__ == '__main__':
         db.session.add_all(sessions)
         db.session.commit()
         print(f"Seeded {len(sessions)} sessions!")
+
+        print("Creating characters...")
+        characters = []
+        for player in players:
+            user_game_ids = [g.id for g in games if g.user_id == player.user_id]
+            num_chars = randint(0, 3)
+            for _ in range(num_chars):
+                chosen_game_id = rc(user_game_ids) if user_game_ids else None
+                char = Character(
+                    name=fake.name(),
+                    character_class=rc([
+                        "Fighter", "Wizard", "Rogue", "Cleric",
+                        "Druid", "Paladin", "Ranger", "Bard", "Monk"
+                    ]),
+                    level=randint(1, 20),
+                    icon=fake.image_url(),
+                    is_active=rc([True, False]),
+                    player_id=player.id,
+                    game_id=chosen_game_id
+                )
+                characters.append(char)
+        db.session.add_all(characters)
+        db.session.commit()
+        print(f"Seeded {len(characters)} characters!")

@@ -18,12 +18,12 @@ sqlalchemy-stubs = "*"
 python-dotenv = "*"
 marshmallow = "*"
 flask-marshmallow = "*"
-marshmallow-sqlalchemy = "*"
 honcho = "*"
 pipenv = "*"
 shell = "*"
 gunicorn = "*"
 psycopg2-binary = "*"
+marshmallow-sqlalchemy = "*"
 
 [requires]
 python_full_version = "3.8.13"
