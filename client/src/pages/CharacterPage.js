@@ -113,11 +113,24 @@ function CharacterPage() {
         >
           {({ isSubmitting }) => (
             <Form>
-              {/* form fields */}
+              {ErrorMessage.server && <div className="error">{ErrorMessage.server}</div>}
+              <FormField label="Name" name="name" />
+              <FormField label="Class" name="character_class" />
+              <FormField label="Level" name="level" type="number" />
+              <FormField label="Icon URL" name="icon" />
+              <div>
+                <label>
+                  <Field type="checkbox" name="is_active" />
+                  Active
+                </label>
+              </div>
+              <button type="submit" disabled={isSubmitting}>Save</button>
+              <button type="button" onClick={() => setIsEditing(false)}>
+                Cancel
+              </button>
             </Form>
           )}
         </Formik>
-        {/* Edit form JSX ends */}
       </div>
     );
   } else {
@@ -129,6 +142,13 @@ function CharacterPage() {
         <p><strong>Level:</strong> {char.level}</p>
         {char.icon && <img src={char.icon} alt={`${char.name} icon`} style={{maxWidth: "100px"}} />}
         <p><strong>Status:</strong> {char.is_active ? "Active" : "Inactive"}</p>
+        <p><strong>Created by:</strong> <Link to={`/players/${parentPlayer.id}`}>{parentPlayer.name}</Link></p>
+        <div>
+          <h3>Game</h3>
+          <Link to={`/games/${char.game_id}`}>
+            {sessionData.user.games.find(g => g.id === char.game_id)?.title || 'Unknown Game'}
+          </Link>
+        </div>
         <div style={{ marginTop: "1rem" }}>
           <button onClick={() => setIsEditing(true)}>Edit</button>
           <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }}>Delete</button>

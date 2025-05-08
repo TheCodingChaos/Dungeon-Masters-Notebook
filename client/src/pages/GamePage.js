@@ -2,10 +2,12 @@
 import React, { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import NewPlayer from "../components/NewPlayer";
+import NewCharacter from "../components/NewCharacter";
 import NewSession from "../components/NewSession";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
+import PlayerCard from "../components/PlayerCard";
 
 // Helper to format ISO date strings as "MMM DD, YYYY"
 const formatDate = (dateStr) => {
@@ -20,6 +22,7 @@ const formatDate = (dateStr) => {
 function GamePage() {
   const { gameId } = useParams();
   const { sessionData, setSessionData } = useContext(SessionContext);
+  const [openCharFor, setOpenCharFor] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
   const [showPlayerForm, setShowPlayerForm] = useState(false);
@@ -112,12 +115,12 @@ function GamePage() {
           {({ isSubmitting, errors }) => (
             <Form>
               {errors.server && <div>{errors.server}</div>}
-              <div><label>Title</label><Field name="title" /><ErrorMessage name="title"/></div>
-              <div><label>System</label><Field name="system"/><ErrorMessage name="system"/></div>
-              <div><label>Status</label><Field name="status"/><ErrorMessage name="status"/></div>
-              <div><label>Description</label><Field name="description" as="textarea"/><ErrorMessage name="description"/></div>
-              <div><label>Start Date</label><Field name="start_date" type="date"/><ErrorMessage name="start_date"/></div>
-              <div><label>Setting</label><Field name="setting"/><ErrorMessage name="setting"/></div>
+              <div><label>Title</label><Field name="title" /><ErrorMessage name="title" /></div>
+              <div><label>System</label><Field name="system" /><ErrorMessage name="system" /></div>
+              <div><label>Status</label><Field name="status" /><ErrorMessage name="status" /></div>
+              <div><label>Description</label><Field name="description" as="textarea" /><ErrorMessage name="description" /></div>
+              <div><label>Start Date</label><Field name="start_date" type="date" /><ErrorMessage name="start_date" /></div>
+              <div><label>Setting</label><Field name="setting" /><ErrorMessage name="setting" /></div>
               <button type="submit" disabled={isSubmitting}>Save</button>
               <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
             </Form>
@@ -126,6 +129,34 @@ function GamePage() {
       </div>
     );
   }
+  // Precompute UI bits for a pure-JSX return
+  const playerCards = (game.players || []).map(player => (
+    <PlayerCard
+      key={player.id}
+      player={player}
+      gameId={game.id}
+      onCharacterAdded={(gameId, newChar) => {
+        setSessionData(prev => ({
+          ...prev,
+          user: {
+            ...prev.user,
+            games: prev.user.games.map(g =>
+              g.id === gameId
+                ? {
+                  ...g,
+                  players: g.players.map(p =>
+                    p.id === newChar.player_id
+                      ? { ...p, characters: [...(p.characters || []), newChar] }
+                      : p
+                  ),
+                }
+                : g
+            ),
+          },
+        }));
+      }}
+    />
+  ));
 
   // Players list and form toggle logic
   const playersList = Array.isArray(game.players)
@@ -135,13 +166,13 @@ function GamePage() {
   const uniquePlayers = playersList.filter(
     (p, i, arr) => arr.findIndex(x => x.id === p.id) === i
   );
-  const playerItems = uniquePlayers.length > 0
-    ? uniquePlayers.map(player => (
+  /*   const playerItems = uniquePlayers.length > 0
+      ? uniquePlayers.map(player => (
         <li key={player.id}>
           <Link to={`/players/${player.id}`}>{player.name}</Link>
         </li>
       ))
-    : <li>No players yet</li>;
+      : <li>No players yet</li>; */
 
   const playerFormElement = showPlayerForm && (
     <div style={{ margin: "1rem 0" }}>
@@ -173,14 +204,19 @@ function GamePage() {
     ? game.sessions.filter(s => s != null)
     : [];
   const sessionItems = sessionsList.length > 0
-    ? sessionsList.map(sess => (
+    ? sessionsList.map(sess => {
+      const displaySummary = sess.summary && sess.summary.length > 30
+        ? sess.summary.slice(0, 30) + '...'
+        : sess.summary || "";
+      return (
         <li key={sess.id}>
           <Link to={`/sessions/${sess.id}`}>
-            {formatDate(sess.date)}{sess.summary ? `: ${sess.summary}` : ""}
+            {formatDate(sess.date)}{displaySummary ? `: ${displaySummary}` : ""}
           </Link>
         </li>
-      ))
-    : <li>No sessions yet</li>;
+      );
+    })
+    : [<li key="no-sessions">No sessions yet</li>];
 
   const sessionFormElement = showSessionForm && (
     <div style={{ margin: "1rem 0" }}>
@@ -189,6 +225,60 @@ function GamePage() {
   );
 
   const sessionToggleLabel = showSessionForm ? "Cancel" : "+ New Session";
+
+  // Precompute UI sections for pure JSX return
+  const characterItems = (game.players || []).flatMap(p =>
+    (p.characters || []).map(c => (
+      <li key={c.id} style={{ marginBottom: "0.5rem" }}>
+        {c.name} ({c.character_class} L{c.level}) — {c.is_active ? "Active" : "Inactive"} — {p.name}
+      </li>
+    ))
+  );
+
+  const playersListUI = uniquePlayers.length > 0
+    ? uniquePlayers.map(player => (
+      <li key={player.id} style={{ marginBottom: "1rem" }}>
+        <Link to={`/players/${player.id}`}>{player.name}</Link>
+        <button
+          onClick={() =>
+            setOpenCharFor(openCharFor === player.id ? null : player.id)
+          }
+          style={{ marginLeft: "0.5rem" }}
+        >
+          {openCharFor === player.id ? "Cancel" : "+ Add Character"}
+        </button>
+        {openCharFor === player.id && (
+          <NewCharacter
+            gameId={game.id}
+            playerId={player.id}
+            onSuccess={newChar => {
+              setOpenCharFor(null);
+              setSessionData(prev => ({
+                ...prev,
+                user: {
+                  ...prev.user,
+                  games: prev.user.games.map(g =>
+                    g.id === game.id
+                      ? {
+                        ...g,
+                        players: g.players.map(pl =>
+                          pl.id === player.id
+                            ? { ...pl, characters: [...(pl.characters || []), newChar] }
+                            : pl
+                        )
+                      }
+                      : g
+                  )
+                }
+              }));
+            }}
+          />
+        )}
+      </li>
+    ))
+    : <li>No players yet</li>;
+
+  const sessionsListUI = sessionItems;
 
   // DETAIL VIEW
   return (
@@ -201,12 +291,15 @@ function GamePage() {
       {game.setting && (<p><strong>Setting:</strong> {game.setting}</p>)}
       <p><strong>Status:</strong> {game.status}</p>
       <div style={{ marginTop: "1rem" }}>
-        <h3>Players</h3>
-        <button onClick={() => setShowPlayerForm(!showPlayerForm)}>
-          {playerToggleLabel}
-        </button>
-        {playerFormElement}
-        <ul>{playerItems}</ul>
+        <h3>Characters</h3>
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {characterItems}
+        </ul>
+      </div>
+      <div style={{ marginTop: "1rem" }}>
+        <div className="players-list">
+          {playerCards}
+        </div>
       </div>
       <div style={{ marginTop: "1rem" }}>
         <h3>Sessions</h3>
@@ -214,11 +307,7 @@ function GamePage() {
           {sessionToggleLabel}
         </button>
         {sessionFormElement}
-        <ul>{sessionItems}</ul>
-      </div>
-      <div style={{ marginTop: "1rem" }}>
-        <button onClick={() => setIsEditing(true)}>Edit</button>
-        <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }}>Delete</button>
+        <ul>{sessionsListUI}</ul>
       </div>
     </div>
   );

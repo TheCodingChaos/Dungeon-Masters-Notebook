@@ -1,7 +1,10 @@
 
 
+import callApi from "../utils/CallApi";
+import FormField from "./FormField";
+
 import React, { useContext } from "react";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
 import NewPlayer from "./NewPlayer";
@@ -52,14 +55,7 @@ function NewCharacter({ gameId, playerId, onSuccess }) {
         try {
           // Include gameId so backend can set the correct game_id
           const payload = { ...values, game_id: gameId };
-          const res = await fetch(`/players/${values.player_id}/characters`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(payload),
-          });
-          if (!res.ok) throw new Error("Failed to create character");
-          const newChar = await res.json();
+          const newChar = await callApi(`/players/${values.player_id}/characters`, { method: "POST", body: JSON.stringify(payload) });
           if (onSuccess) onSuccess(newChar);
           resetForm();
         } catch (e) {
@@ -71,18 +67,15 @@ function NewCharacter({ gameId, playerId, onSuccess }) {
     >
       {({ isSubmitting, values, setFieldValue }) => (
         <Form>
-          <div>
-            <label htmlFor="player_id">Player</label>
-            <Field as="select" name="player_id" disabled={!!playerId}>
-              <option value="" disabled>Select player</option>
-              {validPlayers.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-              <option value="__new">Add New Player...</option>
-            </Field>
-            <ErrorMessage name="player_id" component="div" />
-          </div>
-          {values.player_id === "__new" && (
+          <FormField label="Player" name="player_id" as="select" disabled={!!playerId}>
+            <option value="" disabled>Select player</option>
+            {validPlayers.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+            <option value="__new">Add New Player...</option>
+          </FormField>
+
+          {values.player_id === "__new" ? (
             <div style={{ margin: "1rem 0" }}>
               <NewPlayer
                 gameId={gameId}
@@ -91,36 +84,23 @@ function NewCharacter({ gameId, playerId, onSuccess }) {
                 }}
               />
             </div>
+          ) : (
+            <>
+              <FormField label="Name" name="name" />
+              <FormField label="Class" name="character_class" />
+              <FormField label="Level" name="level" type="number" />
+              <FormField label="Icon URL" name="icon" />
+              <div>
+                <label>
+                  <input name="is_active" type="checkbox" />
+                  Active
+                </label>
+              </div>
+              <button type="submit" disabled={isSubmitting}>
+                Add Character
+              </button>
+            </>
           )}
-          <div>
-            <label htmlFor="name">Name</label>
-            <Field name="name" />
-            <ErrorMessage name="name" component="div" />
-          </div>
-          <div>
-            <label htmlFor="character_class">Class</label>
-            <Field name="character_class" />
-            <ErrorMessage name="character_class" component="div" />
-          </div>
-          <div>
-            <label htmlFor="level">Level</label>
-            <Field name="level" type="number" />
-            <ErrorMessage name="level" component="div" />
-          </div>
-          <div>
-            <label htmlFor="icon">Icon URL</label>
-            <Field name="icon" />
-            <ErrorMessage name="icon" component="div" />
-          </div>
-          <div>
-            <label>
-              <Field name="is_active" type="checkbox" />
-              Active
-            </label>
-          </div>
-          <button type="submit" disabled={isSubmitting}>
-            Add Character
-          </button>
         </Form>
       )}
     </Formik>

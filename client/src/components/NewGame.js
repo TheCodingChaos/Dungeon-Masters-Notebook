@@ -1,8 +1,9 @@
 
 
+import FormField from "./FormField";
 import React from "react";
-import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import CrudForm from "../hooks/useCRUDForm";
 
 const NewGameSchema = Yup.object({
   title: Yup.string().required("Title is required"),
@@ -15,7 +16,8 @@ const NewGameSchema = Yup.object({
 
 export default function NewGame({ onSuccess }) {
   return (
-    <Formik
+    <CrudForm
+      path="/games"
       initialValues={{
         title: "",
         system: "",
@@ -25,68 +27,14 @@ export default function NewGame({ onSuccess }) {
         setting: "",
       }}
       validationSchema={NewGameSchema}
-      onSubmit={async (values, { setSubmitting, setErrors, resetForm }) => {
-        try {
-          // Convert empty date string to null
-          const payload = { ...values, start_date: values.start_date || null };
-          const res = await fetch("/games", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(payload),
-          });
-          if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || "Failed to create game");
-          }
-          const newGame = await res.json();
-          resetForm();
-          if (onSuccess) onSuccess(newGame);
-        } catch (e) {
-          setErrors({ server: e.message });
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+      onSubmitSuccess={newGame => onSuccess && onSuccess(newGame)}
     >
-      {({ isSubmitting, errors }) => (
-        <Form>
-          {errors.server && <div className="error">{errors.server}</div>}
-          <div>
-            <label htmlFor="title">Title</label>
-            <Field name="title" type="text" />
-            <ErrorMessage name="title" component="div" />
-          </div>
-          <div>
-            <label htmlFor="system">System</label>
-            <Field name="system" type="text" />
-            <ErrorMessage name="system" component="div" />
-          </div>
-          <div>
-            <label htmlFor="status">Status</label>
-            <Field name="status" type="text" />
-            <ErrorMessage name="status" component="div" />
-          </div>
-          <div>
-            <label htmlFor="description">Description</label>
-            <Field name="description" as="textarea" />
-            <ErrorMessage name="description" component="div" />
-          </div>
-          <div>
-            <label htmlFor="start_date">Start Date</label>
-            <Field name="start_date" type="date" />
-            <ErrorMessage name="start_date" component="div" />
-          </div>
-          <div>
-            <label htmlFor="setting">Setting</label>
-            <Field name="setting" type="text" />
-            <ErrorMessage name="setting" component="div" />
-          </div>
-          <button type="submit" disabled={isSubmitting}>
-            Create Game
-          </button>
-        </Form>
-      )}
-    </Formik>
+      <FormField label="Title" name="title" />
+      <FormField label="System" name="system" />
+      <FormField label="Status" name="status" />
+      <FormField label="Description" name="description" as="textarea" />
+      <FormField label="Start Date" name="start_date" type="date" />
+      <FormField label="Setting" name="setting" />
+    </CrudForm>
   );
 }

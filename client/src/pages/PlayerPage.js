@@ -4,14 +4,13 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 // No Formik or Yup imports needed
 import { SessionContext } from "../contexts/SessionContext";
 import NewCharacter from "../components/NewCharacter";
-import { Link as RouterLink } from "react-router-dom";
 
 function PlayerPage() {
   const { playerId } = useParams();
   const navigate = useNavigate();
   const { sessionData, setSessionData } = useContext(SessionContext);
   const [isEditing, setIsEditing] = useState(false);
-  const [showCharForm, setShowCharForm] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState("");
 
   // Find the player across all games
   const games = sessionData.user?.games || [];
@@ -38,28 +37,9 @@ function PlayerPage() {
           }))
         }
       }));
-      navigate(`/games/${player.game_id}`);
+      navigate("/dashboard");
     }
   };
-
-
-  // Characters list and form logic
-  const charItems = player?.characters?.length
-    ? player.characters.map(c => (
-        <li key={c.id}>
-          <RouterLink to={`/characters/${c.id}`}>{c.name}</RouterLink>
-        </li>
-      ))
-    : <li>No characters yet</li>;
-  const charFormElement = showCharForm && (
-    <div style={{ margin: "1rem 0" }}>
-      <NewCharacter
-        playerId={player.id}
-        onSuccess={() => setShowCharForm(false)}
-      />
-    </div>
-  );
-  const charToggleLabel = showCharForm ? "Cancel" : "+ New Character";
 
   let content;
   if (!player) {
@@ -79,18 +59,70 @@ function PlayerPage() {
   } else {
     content = (
       <div>
-        <Link to={`/games/${player.game_id}`}>← Back to Game</Link>
+        <Link to="/dashboard">← Back to Dashboard</Link>
         <h1>{player.name}</h1>
         {player.summary && (
           <p><strong>Summary:</strong> {player.summary}</p>
         )}
-        <div style={{ marginTop: "1rem" }}>
+        <div style={{ margintTop: "1rem"}}>
           <h3>Characters</h3>
-          <button onClick={() => setShowCharForm(!showCharForm)}>
-            {charToggleLabel}
-          </button>
-          {charFormElement}
-          <ul>{charItems}</ul>
+          <ul style={{ listStyle: "none", padding: 0}}>
+            {player?.characters?.length
+              ? player.characters.map(c => (
+                <li key={c.id} style={{display: "flex", alignItems: "center", marginBottom: "0.5rem"}}>
+                  {c.icon && <img src={c.icon} alt={`${c.name} icon`} style={{ maxWidth: "50px", marginRight: "0.5rem" }} />}
+                  <div>
+                    <Link to={`/characters/${c.id}`}>{c.name}</Link> ({c.character_class} L{c.level}) —
+                    {c.is_active ? " Active" : " Inactive"} in{" "}
+                    <Link to={`/games/${c.game_id}`}>
+                      {sessionData.user.games.find(g => g.id === c.game_id)?.title || "?"}
+                    </Link>
+                  </div>
+                </li>
+              ))
+            : <li>No characters yet</li>}
+          </ul>
+
+          <h4>Add this Player to a Game</h4>
+          <select value={selectedGameId} onChange={e => setSelectedGameId(e.target.value)}>
+            <option value="">Select a game</option>
+            {sessionData.user.games
+              .filter(g => !player.characters.some(c => c.game_id === g.id))
+              .map(g => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+          </select>
+          {selectedGameId && (
+            <NewCharacter
+            gameId={+selectedGameId}
+            playerId={player.id}
+            onSuccess={newChar => {
+              setSelectedGameId("");
+              setSessionData(prev => ({
+                ...prev,
+                user: {
+                  ...prev.user,
+                  games: prev.user.games.map(g =>
+                    g.id === newChar.game_id
+                    ? {
+                      ...g,
+                      players: [
+                        ...(g.players||[]),
+                        {
+                          id: player.id,
+                          name: player.name,
+                          summary: player.summary,
+                          characters: [newChar]
+                        }
+                      ]
+                      }
+                    : g
+                  )
+                }
+              }));
+            }}
+          />
+        )}
         </div>
         <div style={{ marginTop: "1rem" }}>
           <button onClick={() => setIsEditing(true)}>Edit</button>

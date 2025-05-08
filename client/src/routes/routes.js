@@ -11,6 +11,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "../components/Login";
 import Signup from "../components/Signup";
 import AuthPage from "../pages/AuthPage";
+import AllCharactersPage from "../pages/AllCharactersPage";
 
 function AppRoutes() {
   const { sessionData } = useContext(SessionContext);
@@ -66,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <CharacterPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/characters"
+        element={
+          <ProtectedRoute>
+            <AllCharactersPage />
           </ProtectedRoute>
         }
       />
