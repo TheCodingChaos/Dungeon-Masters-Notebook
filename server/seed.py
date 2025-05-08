@@ -6,13 +6,9 @@ from app import app
 if __name__ == '__main__':
     fake = Faker()
     with app.app_context():
-        print("Deleting old data...")
-        # Clear all tables in dependency order to honor FKs
-        Session.query.delete()
-        Player.query.delete()
-        Game.query.delete()
-        User.query.delete()
-        db.session.commit()
+        print("Resetting database schema...")
+        db.drop_all()
+        db.create_all()
 
         print("Creating users...")
         users = []
