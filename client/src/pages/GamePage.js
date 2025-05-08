@@ -145,7 +145,24 @@ function GamePage() {
 
   const playerFormElement = showPlayerForm && (
     <div style={{ margin: "1rem 0" }}>
-      <NewPlayer gameId={game.id} onSuccess={() => setShowPlayerForm(false)} />
+      <NewPlayer
+        gameId={game.id}
+        onSuccess={(newPlayer) => {
+          // Close form and append the new player to this game in context
+          setShowPlayerForm(false);
+          setSessionData(prev => ({
+            ...prev,
+            user: {
+              ...prev.user,
+              games: prev.user.games.map(g =>
+                g.id === game.id
+                  ? { ...g, players: [...(g.players || []), newPlayer] }
+                  : g
+              )
+            }
+          }));
+        }}
+      />
     </div>
   );
 

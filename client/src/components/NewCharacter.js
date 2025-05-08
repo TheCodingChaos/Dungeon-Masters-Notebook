@@ -1,6 +1,6 @@
 
 
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
@@ -17,7 +17,6 @@ const CharacterSchema = Yup.object({
 
 function NewCharacter({ gameId, playerId, onSuccess }) {
   const { sessionData } = useContext(SessionContext);
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
   let playersList = [];
   if (playerId) {
     // Single-player context
@@ -88,7 +87,6 @@ function NewCharacter({ gameId, playerId, onSuccess }) {
               <NewPlayer
                 gameId={gameId}
                 onSuccess={(newPlayer) => {
-                  setShowPlayerForm(false);
                   setFieldValue("player_id", newPlayer.id);
                 }}
               />
