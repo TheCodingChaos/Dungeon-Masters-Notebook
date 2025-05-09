@@ -17,43 +17,22 @@ export default function useSessionOptions() {
       label: g.title
     })) || [];
 
-  // Players: unique across all games
-  let playerList = [];
-  if (user?.games) {
-    const seen = new Set();
-    user.games.forEach(g => {
-      (g.players || []).forEach(p => {
-        if (p && !seen.has(p.id)) {
-          seen.add(p.id);
-          playerList.push(p);
-        }
-      });
-    });
-  }
-  const playerOptions = playerList.map(p => ({
-    value: p.id,
-    label: p.name
-  }));
+  // Players: unique across all games (declarative)
+  const playerOptions = Array.from(
+    new Map(
+      user?.games?.flatMap(g => g.players || []).map(p => [p.id, p])
+    ).values()
+  ).map(p => ({ value: p.id, label: p.name }));
 
-  // Characters: unique across all games/players
-  let characterList = [];
-  if (user?.games) {
-    const seen = new Set();
-    user.games.forEach(g => {
-      (g.players || []).forEach(p => {
-        (p.characters || []).forEach(c => {
-          if (c && !seen.has(c.id)) {
-            seen.add(c.id);
-            characterList.push(c);
-          }
-        });
-      });
-    });
-  }
-  const characterOptions = characterList.map(c => ({
-    value: c.id,
-    label: c.name
-  }));
+  // Characters: unique across all games/players (declarative)
+  const characterOptions = Array.from(
+    new Map(
+      user?.games
+        ?.flatMap(g => g.players || [])
+        .flatMap(p => p.characters || [])
+        .map(c => [c.id, c])
+    ).values()
+  ).map(c => ({ value: c.id, label: c.name }));
 
   return { gameOptions, playerOptions, characterOptions };
 }

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function CharacterCard({ character }) {
+export default function CharacterCard({ character, onEdit, onDelete }) {
   return (
     <div className="character-card">
       {character.icon && (
@@ -19,6 +19,10 @@ export default function CharacterCard({ character }) {
           {character.character_class} L{character.level} —{' '}
           {character.is_active ? 'Active' : 'Inactive'}
         </p>
+      </div>
+      <div>
+        <button onClick={() => onEdit && onEdit(character)}>Edit</button>
+        <button onClick={() => onDelete && onDelete(character)}>Delete</button>
       </div>
     </div>
   );

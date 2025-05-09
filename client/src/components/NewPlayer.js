@@ -15,8 +15,10 @@ const NewPlayerWithCharacterSchema = Yup.object({
 });
 
 export default function NewPlayer({ gameId, onSuccess }) {
+  // Use gameId as key to force Formik to reset if game changes
   return (
     <Formik
+      key={gameId}
       initialValues={{
         name: "",
         summary: "",

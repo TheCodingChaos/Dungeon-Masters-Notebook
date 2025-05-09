@@ -1,7 +1,8 @@
 
 import React, { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Formik, Form } from "formik";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import FormField from "../components/FormField";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
 
@@ -20,17 +21,10 @@ function CharacterPage() {
   const [isEditing, setIsEditing] = useState(false);
 
   const games = sessionData.user?.games || [];
-  let char, parentPlayer;
-  games.forEach(g =>
-    g.players.forEach(p =>
-      p.characters?.forEach(c => {
-        if (c.id === parseInt(characterId, 10)) {
-          char = c;
-          parentPlayer = p;
-        }
-      })
-    )
-  );
+  const entry = games.flatMap(g => g.players.flatMap(p => (p.characters || []).map(c => ({ c, p }))))
+    .find(({ c }) => c.id === parseInt(characterId, 10));
+  const char = entry?.c;
+  const parentPlayer = entry?.p;
 
 
   const handleDelete = async () => {
@@ -47,7 +41,7 @@ function CharacterPage() {
             ...g,
             players: g.players.map(p => ({
               ...p,
-              characters: (p.characters||[]).filter(ch => ch.id !== char.id)
+              characters: (p.characters || []).filter(ch => ch.id !== char.id)
             }))
           }))
         }
@@ -140,7 +134,7 @@ function CharacterPage() {
         <h1>{char.name}</h1>
         <p><strong>Class:</strong> {char.character_class}</p>
         <p><strong>Level:</strong> {char.level}</p>
-        {char.icon && <img src={char.icon} alt={`${char.name} icon`} style={{maxWidth: "100px"}} />}
+        {char.icon && <img src={char.icon} alt={`${char.name} icon`} style={{ maxWidth: "100px" }} />}
         <p><strong>Status:</strong> {char.is_active ? "Active" : "Inactive"}</p>
         <p><strong>Created by:</strong> <Link to={`/players/${parentPlayer.id}`}>{parentPlayer.name}</Link></p>
         <div>

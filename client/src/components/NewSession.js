@@ -4,7 +4,7 @@ import FormField from "./FormField";
 
 import React from "react";
 import * as Yup from "yup";
-import CrudForm from "../hooks/useCRUDForm";
+import CrudForm from "../hooks/UseCRUDForm";
 
 const NewSessionSchema = Yup.object({
   date: Yup.date().required("Date is required"),

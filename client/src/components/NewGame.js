@@ -3,7 +3,7 @@
 import FormField from "./FormField";
 import React from "react";
 import * as Yup from "yup";
-import CrudForm from "../hooks/useCRUDForm";
+import CrudForm from "../hooks/UseCRUDForm";
 
 const NewGameSchema = Yup.object({
   title: Yup.string().required("Title is required"),

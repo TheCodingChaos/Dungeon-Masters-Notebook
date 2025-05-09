@@ -1,8 +1,6 @@
 
 import React, { useContext, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import NewPlayer from "../components/NewPlayer";
-import NewCharacter from "../components/NewCharacter";
+import { useParams, Link } from "react-router-dom";
 import NewSession from "../components/NewSession";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
@@ -22,10 +20,7 @@ const formatDate = (dateStr) => {
 function GamePage() {
   const { gameId } = useParams();
   const { sessionData, setSessionData } = useContext(SessionContext);
-  const [openCharFor, setOpenCharFor] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const navigate = useNavigate();
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [showSessionForm, setShowSessionForm] = useState(false);
   const EditGameSchema = Yup.object({
     title: Yup.string().required("Required"),
@@ -39,22 +34,6 @@ function GamePage() {
     (g) => g.id === parseInt(gameId, 10)
   );
 
-  const handleDelete = async () => {
-    const res = await fetch(`/games/${gameId}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (res.ok) {
-      setSessionData(prev => ({
-        ...prev,
-        user: {
-          ...prev.user,
-          games: prev.user.games.filter(g => g.id !== parseInt(gameId, 10))
-        }
-      }));
-      navigate("/dashboard");
-    }
-  };
 
   // If game not found
   if (!game) {
@@ -158,14 +137,6 @@ function GamePage() {
     />
   ));
 
-  // Players list and form toggle logic
-  const playersList = Array.isArray(game.players)
-    ? game.players.filter(player => player != null)
-    : [];
-  // Remove duplicate players
-  const uniquePlayers = playersList.filter(
-    (p, i, arr) => arr.findIndex(x => x.id === p.id) === i
-  );
   /*   const playerItems = uniquePlayers.length > 0
       ? uniquePlayers.map(player => (
         <li key={player.id}>
@@ -174,30 +145,6 @@ function GamePage() {
       ))
       : <li>No players yet</li>; */
 
-  const playerFormElement = showPlayerForm && (
-    <div style={{ margin: "1rem 0" }}>
-      <NewPlayer
-        gameId={game.id}
-        onSuccess={(newPlayer) => {
-          // Close form and append the new player to this game in context
-          setShowPlayerForm(false);
-          setSessionData(prev => ({
-            ...prev,
-            user: {
-              ...prev.user,
-              games: prev.user.games.map(g =>
-                g.id === game.id
-                  ? { ...g, players: [...(g.players || []), newPlayer] }
-                  : g
-              )
-            }
-          }));
-        }}
-      />
-    </div>
-  );
-
-  const playerToggleLabel = showPlayerForm ? "Cancel" : "+ New Player";
 
   // Sessions list and form toggle logic
   const sessionsList = Array.isArray(game.sessions)
@@ -235,48 +182,6 @@ function GamePage() {
     ))
   );
 
-  const playersListUI = uniquePlayers.length > 0
-    ? uniquePlayers.map(player => (
-      <li key={player.id} style={{ marginBottom: "1rem" }}>
-        <Link to={`/players/${player.id}`}>{player.name}</Link>
-        <button
-          onClick={() =>
-            setOpenCharFor(openCharFor === player.id ? null : player.id)
-          }
-          style={{ marginLeft: "0.5rem" }}
-        >
-          {openCharFor === player.id ? "Cancel" : "+ Add Character"}
-        </button>
-        {openCharFor === player.id && (
-          <NewCharacter
-            gameId={game.id}
-            playerId={player.id}
-            onSuccess={newChar => {
-              setOpenCharFor(null);
-              setSessionData(prev => ({
-                ...prev,
-                user: {
-                  ...prev.user,
-                  games: prev.user.games.map(g =>
-                    g.id === game.id
-                      ? {
-                        ...g,
-                        players: g.players.map(pl =>
-                          pl.id === player.id
-                            ? { ...pl, characters: [...(pl.characters || []), newChar] }
-                            : pl
-                        )
-                      }
-                      : g
-                  )
-                }
-              }));
-            }}
-          />
-        )}
-      </li>
-    ))
-    : <li>No players yet</li>;
 
   const sessionsListUI = sessionItems;
 
