@@ -1,0 +1,51 @@
+
+
+nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: rgba(240, 224, 200, 0.8); /* semi-transparent sepia tone */
+  border-bottom: 1px solid #a37e4e;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+nav a {
+  color: #3f2f1e;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+nav a:hover {
+  background-color: rgba(163, 126, 78, 0.2);
+}
+
+nav button {
+  background-color: #a37e4e;
+  color: #fff;
+  border: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+nav button:hover {
+  background-color: #8f6d3c;
+}
+
+nav label {
+  font-weight: bold;
+  color: #3f2f1e;
+}
+
+nav select {
+  background-color: #fff8e7;
+  color: #3f2f1e;
+  border: 1px solid #a37e4e;
+  border-radius: 4px;
+  padding: 0.3rem;
+}

@@ -1,0 +1,43 @@
+
+
+.player-card {
+  background-color: rgba(30, 20, 10, 0.85); /* rich medieval parchment tone */
+  color: #f0e8d0;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(1px);
+}
+
+.player-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+  color: #ffe080;
+}
+
+.player-card p {
+  margin: 0.25rem 0 0.75rem 0;
+  color: #d8c8a0;
+}
+
+.characters-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.player-card button {
+  background-color: #5a4327;
+  color: #fff2d9;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.player-card button:hover {
+  background-color: #7b5e38;
+}

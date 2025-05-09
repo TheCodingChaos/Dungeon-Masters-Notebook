@@ -1,38 +1,76 @@
-
-
 import { useContext } from "react";
 import { SessionContext } from "../contexts/SessionContext";
 
 /**
- * Returns arrays of { value, label } for games, players, and characters for the current session.
+ * useSessionOptions: provides dropdown option lists for games, players, and characters.
+ * Returns arrays of { value, label } for current user's games, players, and characters.
  */
 export default function useSessionOptions() {
   const { sessionData } = useContext(SessionContext);
   const user = sessionData.user;
 
-  // Games: {value: id, label: title}
-  const gameOptions =
-    user?.games?.map(g => ({
-      value: g.id,
-      label: g.title
-    })) || [];
+  // --- Build game options ---
+  // Format each game as { value: game.id, label: game.title }
+  const gameOptions = user?.games?.map((game) => ({
+    value: game.id,
+    label: game.title,
+  })) || [];
 
-  // Players: unique across all games (declarative)
-  const playerOptions = Array.from(
-    new Map(
-      user?.games?.flatMap(g => g.players || []).map(p => [p.id, p])
-    ).values()
-  ).map(p => ({ value: p.id, label: p.name }));
+  // --- Build player options ---
+  const allPlayers = [];
 
-  // Characters: unique across all games/players (declarative)
-  const characterOptions = Array.from(
-    new Map(
-      user?.games
-        ?.flatMap(g => g.players || [])
-        .flatMap(p => p.characters || [])
-        .map(c => [c.id, c])
-    ).values()
-  ).map(c => ({ value: c.id, label: c.name }));
+  // Gather all players from all games
+  if (user?.games) {
+    for (let game of user.games) {
+      if (game.players) {
+        for (let player of game.players) {
+          allPlayers.push(player);
+        }
+      }
+    }
+  }
+
+  // Create a map to ensure player IDs are unique
+  const uniquePlayersMap = new Map();
+  for (let player of allPlayers) {
+    uniquePlayersMap.set(player.id, player);
+  }
+
+  // Format players as { value: id, label: name }
+  const playerOptions = Array.from(uniquePlayersMap.values()).map((p) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  // --- Build character options ---
+  const allCharacters = [];
+
+  // Gather all characters from all players of all games
+  if (user?.games) {
+    for (let game of user.games) {
+      if (game.players) {
+        for (let player of game.players) {
+          if (player.characters) {
+            for (let character of player.characters) {
+              allCharacters.push(character);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Create a map to ensure character IDs are unique
+  const uniqueCharactersMap = new Map();
+  for (let character of allCharacters) {
+    uniqueCharactersMap.set(character.id, character);
+  }
+
+  // Format characters as { value: id, label: name }
+  const characterOptions = Array.from(uniqueCharactersMap.values()).map((c) => ({
+    value: c.id,
+    label: c.name,
+  }));
 
   return { gameOptions, playerOptions, characterOptions };
 }

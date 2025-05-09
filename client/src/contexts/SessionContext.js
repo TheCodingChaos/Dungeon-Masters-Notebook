@@ -1,31 +1,49 @@
-import React, { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect } from "react";
 
+// Create the context object
 export const SessionContext = createContext(null);
 
+// Context provider component
 export default function SessionProvider({ children }) {
+  // Holds the session state (e.g. logged-in user)
   const [sessionData, setSessionData] = useState({});
+
+  // Tracks whether the session has been checked yet
   const [isSessionChecked, setIsSessionChecked] = useState(false);
 
-  useEffect(() => {
-    async function initialize() {
-      try {
-        const res = await fetch("/check_session", { credentials: "include" });
-        if (res.ok) {
-          const user = await res.json();
-          setSessionData(prev => ({ ...prev, user }));
-        }
-      } catch (e) {
-        console.error("Session init failed", e);
+  // Function to check for an existing user session on page load
+  async function initializeSession() {
+    try {
+      const response = await fetch("/check_session", { credentials: "include" });
+
+      if (response.ok) {
+        const user = await response.json();
+
+        // Save the user into sessionData state
+        setSessionData((prev) => ({
+          ...prev,
+          user: user,
+        }));
       }
-      setIsSessionChecked(true);
+    } catch (error) {
+      console.error("Session initialization failed:", error);
     }
-    initialize();
+
+    // Mark that the session check has completed
+    setIsSessionChecked(true);
+  }
+
+  // Check session on initial component mount
+  useEffect(() => {
+    initializeSession();
   }, []);
 
+  // Show loading state while checking session
   if (!isSessionChecked) {
     return <p>Loading...</p>;
   }
 
+  // Provide session context to children
   return (
     <SessionContext.Provider value={{ sessionData, setSessionData }}>
       {children}

@@ -1,46 +1,54 @@
-
-
-import React from 'react';
+import "./FilterableList.css";
 
 /**
- * A generic list wrapper that displays multiple filter controls and a list of items.
+ * A generic list component with filter dropdowns and a list of items.
  *
  * Props:
- *   - filters: Array of { label: string, options: { value, label }[], value, onChange }
- *   - items: Array of data items to render
- *   - renderItem: Function(item) => JSX element for each item
- *
- * Example usage:
- *   <FilterableList
- *     filters={[
- *       { label: 'Filter by Game', options: gameOptions, value: filterGameId, onChange: e => setFilterGameId(e.target.value) },
- *       { label: 'Filter by Player', options: playerOptions, value: filterPlayerId, onChange: e => setFilterPlayerId(e.target.value) }
- *     ]}
- *     items={filteredCharacters}
- *     renderItem={c => <CharacterCard key={c.id} character={c} />}
- *   />
- * }
+ *   - filters: Array of filter objects with label, options, value, onChange
+ *   - items: Array of data to render
+ *   - renderItem: Function to render each item
  */
 function FilterableList({ filters, items, renderItem }) {
+  // Render dropdowns for each filter
+  const renderFilters = () => {
+    return filters.map((filter, index) => {
+      const { label, options, value, onChange } = filter;
+
+      return (
+        <div key={index} className="filter-control">
+          <label className="filter-label">{label}</label>
+          <select value={value} onChange={onChange}>
+            <option value="">All</option>
+            {options.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+      );
+    });
+  };
+
+  // Render all items using provided render function
+  const renderItems = () => {
+    return items.map((item, idx) => (
+      <div key={idx} className="filterable-item">
+        {renderItem(item)}
+      </div>
+    ));
+  };
+
   return (
-    <>
-      <div className="filter-controls" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
-        {filters.map(({ label, options, value, onChange }, idx) => (
-          <div key={idx} className="filter-control">
-            <label style={{ marginRight: '0.5rem' }}>{label}</label>
-            <select value={value} onChange={onChange}>
-              <option value="">All</option>
-              {options.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-        ))}
+    <div className="filterable-container">
+      {/* Filter controls section */}
+      <div className="filter-controls">
+        {renderFilters()}
       </div>
+
+      {/* Filtered results */}
       <div className="filterable-list">
-        {items.map(item => renderItem(item))}
+        {renderItems()}
       </div>
-    </>
+    </div>
   );
 }
 

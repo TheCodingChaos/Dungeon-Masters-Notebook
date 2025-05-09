@@ -92,6 +92,8 @@ class NewGame(Resource):
 class EditGame(Resource):
     def patch(self, game_id):
         game = Game.query.get_or_404(game_id)
+        if game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         updates = request.get_json()
         try:
             loaded_updates = game_schema.load(updates, partial=True)
@@ -104,6 +106,8 @@ class EditGame(Resource):
 
     def delete(self, game_id):
         game = Game.query.get_or_404(game_id)
+        if game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         db.session.delete(game)
         db.session.commit()
         return '', 204
@@ -126,6 +130,9 @@ class NewPlayer(Resource):
 class EditPlayer(Resource):
     def patch(self, player_id):
         player = Player.query.get_or_404(player_id)
+        owning_game = next((c.game for c in player.characters if c and c.game), None)
+        if not owning_game or owning_game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         updates = request.get_json()
         try:
             loaded_updates = player_schema.load(updates, partial=True)
@@ -138,6 +145,9 @@ class EditPlayer(Resource):
 
     def delete(self, player_id):
         player = Player.query.get_or_404(player_id)
+        owning_game = next((c.game for c in player.characters if c and c.game), None)
+        if not owning_game or owning_game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         db.session.delete(player)
         db.session.commit()
         return '', 204
@@ -184,6 +194,9 @@ class EditSession(Resource):
 class NewCharacter(Resource):
     def post(self, player_id):
         player = Player.query.get_or_404(player_id)
+        owning_game = next((c.game for c in player.characters if c and c.game), None)
+        if 'game_id' in data and data['game_id'] != owning_game.id:
+            return {'error': 'Mismatched game_id and player'}, 400
         data = request.get_json()
         data['player_id'] = player_id
         try:
@@ -194,10 +207,12 @@ class NewCharacter(Resource):
         db.session.add(new_char)
         db.session.commit()
         return character_schema.dump(new_char), 201
-    
+        
 class EditCharacter(Resource):
     def patch(self, character_id):
         char = Character.query.get_or_404(character_id)
+        if not char.game or char.game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         updates = request.get_json()
         try:
             loaded = character_schema.load(updates, partial=True)
@@ -209,6 +224,9 @@ class EditCharacter(Resource):
         return character_schema.dump(char), 200
     
     def delete(self, character_id):
+        char = Character.query.get_or_404(character_id)
+        if not char.game or char.game.user_id != session.get('user_id'):
+            return {'error': '401 unauthorized'}, 401
         char = Character.query.get_or_404(character_id)
         db.session.delete(char)
         db.session.commit()

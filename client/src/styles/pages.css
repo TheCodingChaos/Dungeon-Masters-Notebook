@@ -1,0 +1,55 @@
+.auth-page {
+  background-image: url("../assets/auth-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.game-page {
+  background-image: url("../assets/game-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.player-page {
+  background-image: url("../assets/player-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.character-page {
+  background-image: url("../assets/character-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.all-characters-page {
+  background-image: url("../assets/all-characters-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.dash-page {
+  background-image: url("../assets/dash-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.session-page {
+  background-image: url("../assets/session-bg.png");
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  padding: 2rem;
+}

@@ -1,11 +1,15 @@
 
-import React, { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import NewSession from "../components/NewSession";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import FormField from "../components/FormField";
+import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
 import PlayerCard from "../components/PlayerCard";
+import "../styles/pages.css";
+import "../components/GameCard.css"
+import "../components/CharacterCard.css"
 
 // Helper to format ISO date strings as "MMM DD, YYYY"
 const formatDate = (dateStr) => {
@@ -94,12 +98,12 @@ function GamePage() {
           {({ isSubmitting, errors }) => (
             <Form>
               {errors.server && <div>{errors.server}</div>}
-              <div><label>Title</label><Field name="title" /><ErrorMessage name="title" /></div>
-              <div><label>System</label><Field name="system" /><ErrorMessage name="system" /></div>
-              <div><label>Status</label><Field name="status" /><ErrorMessage name="status" /></div>
-              <div><label>Description</label><Field name="description" as="textarea" /><ErrorMessage name="description" /></div>
-              <div><label>Start Date</label><Field name="start_date" type="date" /><ErrorMessage name="start_date" /></div>
-              <div><label>Setting</label><Field name="setting" /><ErrorMessage name="setting" /></div>
+              <FormField label="Title" name="title" />
+              <FormField label="System" name="system" />
+              <FormField label="Status" name="status" />
+              <FormField label="Description" name="description" as="textarea" />
+              <FormField label="Start Date" name="start_date" type="date" />
+              <FormField label="Setting" name="setting" />
               <button type="submit" disabled={isSubmitting}>Save</button>
               <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
             </Form>
@@ -173,40 +177,34 @@ function GamePage() {
 
   const sessionToggleLabel = showSessionForm ? "Cancel" : "+ New Session";
 
-  // Precompute UI sections for pure JSX return
-  const characterItems = (game.players || []).flatMap(p =>
-    (p.characters || []).map(c => (
-      <li key={c.id} style={{ marginBottom: "0.5rem" }}>
-        {c.name} ({c.character_class} L{c.level}) — {c.is_active ? "Active" : "Inactive"} — {p.name}
-      </li>
-    ))
-  );
-
+  // const characterItems = (game.players || []).flatMap(p =>
+  //   (p.characters || []).map(c => (
+  //     <li key={c.id} style={{ marginBottom: "0.5rem" }}>
+  //       {c.name} ({c.character_class} L{c.level}) — {c.is_active ? "Active" : "Inactive"} — {p.name}
+  //     </li>
+  //   ))
+  // );
 
   const sessionsListUI = sessionItems;
 
   // DETAIL VIEW
   return (
-    <div>
+    <div className="game-page">
       <Link to="/dashboard">← Back to Dashboard</Link>
-      <h1>{game.title}</h1>
-      <p><strong>System:</strong> {game.system}</p>
-      {game.description && (<p><strong>Description:</strong> {game.description}</p>)}
-      {game.start_date && (<p><strong>Start Date:</strong> {formatDate(game.start_date)}</p>)}
-      {game.setting && (<p><strong>Setting:</strong> {game.setting}</p>)}
-      <p><strong>Status:</strong> {game.status}</p>
-      <div style={{ marginTop: "1rem" }}>
-        <h3>Characters</h3>
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {characterItems}
-        </ul>
+      <div className="game-card">
+        <h1>{game.title}</h1>
+        <p><strong>System:</strong> {game.system}</p>
+        {game.description && (<p><strong>Description:</strong> {game.description}</p>)}
+        {game.start_date && (<p><strong>Start Date:</strong> {formatDate(game.start_date)}</p>)}
+        {game.setting && (<p><strong>Setting:</strong> {game.setting}</p>)}
+        <p><strong>Status:</strong> {game.status}</p>
       </div>
       <div style={{ marginTop: "1rem" }}>
         <div className="players-list">
           {playerCards}
         </div>
       </div>
-      <div style={{ marginTop: "1rem" }}>
+      <div className="character-card" style={{ marginTop: "1rem" }}>
         <h3>Sessions</h3>
         <button onClick={() => setShowSessionForm(!showSessionForm)}>
           {sessionToggleLabel}

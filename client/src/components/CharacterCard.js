@@ -1,25 +1,37 @@
-
-
-import React from 'react';
 import { Link } from 'react-router-dom';
+import "./CharacterCard.css";
 
 export default function CharacterCard({ character, onEdit, onDelete }) {
+  // Destructure character properties for readability
+  const {
+    id,
+    name,
+    icon,
+    character_class: characterClass,
+    level,
+    is_active: isActive,
+  } = character;
+
   return (
     <div className="character-card">
-      {character.icon && (
+      {/* Character Icon */}
+      {icon && (
         <img
-          src={character.icon}
-          alt={`${character.name} icon`}
-          style={{ maxWidth: '40px', marginRight: '0.5rem' }}
+          className="character-icon"
+          src={icon}
+          alt={`${name} icon`}
         />
       )}
+
+      {/* Character Info */}
       <div>
-        <Link to={`/characters/${character.id}`}>{character.name}</Link>
+        <Link to={`/characters/${id}`}>{name}</Link>
         <p>
-          {character.character_class} L{character.level} —{' '}
-          {character.is_active ? 'Active' : 'Inactive'}
+          {characterClass} L{level} — {isActive ? 'Active' : 'Inactive'}
         </p>
       </div>
+
+      {/* Edit/Delete Buttons */}
       <div>
         <button onClick={() => onEdit && onEdit(character)}>Edit</button>
         <button onClick={() => onDelete && onDelete(character)}>Delete</button>

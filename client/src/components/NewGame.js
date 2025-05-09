@@ -1,10 +1,8 @@
-
-
 import FormField from "./FormField";
-import React from "react";
 import * as Yup from "yup";
 import CrudForm from "../hooks/UseCRUDForm";
 
+// Define validation schema for new game form
 const NewGameSchema = Yup.object({
   title: Yup.string().required("Title is required"),
   system: Yup.string().required("System is required"),
@@ -14,6 +12,7 @@ const NewGameSchema = Yup.object({
   setting: Yup.string(),
 });
 
+// Renders a form to create a new game
 export default function NewGame({ onSuccess }) {
   return (
     <CrudForm
@@ -27,13 +26,21 @@ export default function NewGame({ onSuccess }) {
         setting: "",
       }}
       validationSchema={NewGameSchema}
-      onSubmitSuccess={newGame => onSuccess && onSuccess(newGame)}
+      onSubmitSuccess={(newGame) => {
+        if (onSuccess) onSuccess(newGame);
+      }}
     >
+      {/* Form fields for each game attribute */}
       <FormField label="Title" name="title" />
+      
       <FormField label="System" name="system" />
+      
       <FormField label="Status" name="status" />
+      
       <FormField label="Description" name="description" as="textarea" />
+      
       <FormField label="Start Date" name="start_date" type="date" />
+      
       <FormField label="Setting" name="setting" />
     </CrudForm>
   );

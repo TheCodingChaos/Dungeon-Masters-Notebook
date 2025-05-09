@@ -1,10 +1,10 @@
-
-
-import React, { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import FormField from "../components/FormField";
+import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
+import "../styles/pages.css"
 
 // Helper to format ISO date strings as "MMM DD, YYYY"
 const formatDate = (dateStr) => {
@@ -22,12 +22,20 @@ function SessionPage() {
   const { sessionData, setSessionData } = useContext(SessionContext);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Find session across all games
+  // Find session across all games using for-loops for clarity
   const games = sessionData.user?.games || [];
-  const sess = games.flatMap(g => g.sessions || [])
-    .find(s => s.id === parseInt(sessionId, 10));
+  let session = null;
+  for (const game of games) {
+    for (const s of game.sessions || []) {
+      if (s.id === parseInt(sessionId, 10)) {
+        session = s;
+        break;
+      }
+    }
+    if (session) break;
+  }
 
-  if (!sess) {
+  if (!session) {
     return (
       <div>
         <p>Session not found.</p>
@@ -37,23 +45,26 @@ function SessionPage() {
   }
 
   const handleDelete = async () => {
-    const res = await fetch(`/sessions/${sess.id}`, {
+    const res = await fetch(`/sessions/${session.id}`, {
       method: "DELETE",
       credentials: "include",
     });
     if (res.ok) {
-      // Remove from context
-      setSessionData(prev => ({
-        ...prev,
-        user: {
-          ...prev.user,
-          games: prev.user.games.map(g => ({
-            ...g,
-            sessions: (g.sessions || []).filter(s => s.id !== sess.id)
-          }))
-        }
-      }));
-      navigate(`/games/${sess.game_id}`);
+      // Remove from context using forEach and variable assignment for clarity
+      setSessionData(prev => {
+        const newGames = prev.user.games.map(g => {
+          const newSessions = (g.sessions || []).filter(s => s.id !== session.id);
+          return { ...g, sessions: newSessions };
+        });
+        return {
+          ...prev,
+          user: {
+            ...prev.user,
+            games: newGames
+          }
+        };
+      });
+      navigate(`/games/${session.game_id}`);
     }
   };
 
@@ -68,8 +79,8 @@ function SessionPage() {
         <h1>Edit Session</h1>
         <Formik
           initialValues={{
-            date: sess.date || "",
-            summary: sess.summary || "",
+            date: session.date || "",
+            summary: session.summary || "",
           }}
           validationSchema={EditSessionSchema}
           onSubmit={async (values, { setSubmitting, setErrors }) => {
@@ -78,7 +89,7 @@ function SessionPage() {
                 date: values.date || null,
                 summary: values.summary,
               };
-              const res = await fetch(`/sessions/${sess.id}`, {
+              const res = await fetch(`/sessions/${session.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
@@ -89,19 +100,22 @@ function SessionPage() {
                 throw new Error(err.error || "Failed to update session");
               }
               const updated = await res.json();
-              // Update context
-              setSessionData(prev => ({
-                ...prev,
-                user: {
-                  ...prev.user,
-                  games: prev.user.games.map(g => ({
-                    ...g,
-                    sessions: (g.sessions || []).map(s =>
-                      s.id === updated.id ? updated : s
-                    )
-                  }))
-                }
-              }));
+              // Update context with clearer logic
+              setSessionData(prev => {
+                const newGames = prev.user.games.map(g => {
+                  const newSessions = (g.sessions || []).map(s =>
+                    s.id === updated.id ? updated : s
+                  );
+                  return { ...g, sessions: newSessions };
+                });
+                return {
+                  ...prev,
+                  user: {
+                    ...prev.user,
+                    games: newGames
+                  }
+                };
+              });
               setIsEditing(false);
             } catch (e) {
               setErrors({ server: e.message });
@@ -113,16 +127,8 @@ function SessionPage() {
           {({ isSubmitting, errors }) => (
             <Form>
               {errors.server && <div>{errors.server}</div>}
-              <div>
-                <label htmlFor="date">Date</label>
-                <Field name="date" type="date" />
-                <ErrorMessage name="date" component="div" />
-              </div>
-              <div>
-                <label htmlFor="summary">Summary</label>
-                <Field name="summary" as="textarea" />
-                <ErrorMessage name="summary" component="div" />
-              </div>
+              <FormField label="Date" name="date" type="date" />
+              <FormField label="Summary" name="summary" as="textarea" />
               <button type="submit" disabled={isSubmitting}>
                 Save
               </button>
@@ -137,13 +143,13 @@ function SessionPage() {
   }
 
   return (
-    <div>
-      <Link to={`/games/${sess.game_id}`}>← Back to Game</Link>
-      <h1>Session on {formatDate(sess.date)}</h1>
-      {sess.summary && <p>{sess.summary}</p>}
-      <div style={{ marginTop: "1rem" }}>
+    <div className="session-page">
+      <Link to={`/games/${session.game_id}`}>← Back to Game</Link>
+      <h1>Session on {formatDate(session.date)}</h1>
+      {session.summary && <p>{session.summary}</p>}
+      <div className="session-actions">
         <button onClick={() => setIsEditing(true)}>Edit</button>
-        <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }}>
+        <button onClick={handleDelete} className="session-delete-button">
           Delete
         </button>
       </div>
