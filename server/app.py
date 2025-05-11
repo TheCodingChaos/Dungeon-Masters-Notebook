@@ -216,7 +216,7 @@ class NewCharacter(Resource):
         db.session.add(new_char)
         db.session.commit()
         return character_schema.dump(new_char), 201
-    
+        
 class EditCharacter(Resource):
     def patch(self, character_id):
         char = db.session.get(Character, character_id)

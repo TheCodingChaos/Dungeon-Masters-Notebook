@@ -1,9 +1,13 @@
 
-import React, { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Formik, Form } from "formik";
+import FormField from "../components/FormField";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
+import "../styles/pages.css";
+import "../components/CharacterCard.css";
+import "../components/FormField.css";
 
 const CharacterSchema = Yup.object({
   name: Yup.string().required("Name is required"),
@@ -18,57 +22,78 @@ function CharacterPage() {
   const navigate = useNavigate();
   const { sessionData, setSessionData } = useContext(SessionContext);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // Step 1: Find the character and its player
+  // Loop through all games, players, and characters to find the matching character and its parent player
   const games = sessionData.user?.games || [];
-  let char, parentPlayer;
-  games.forEach(g =>
-    g.players.forEach(p =>
-      p.characters?.forEach(c => {
-        if (c.id === parseInt(characterId, 10)) {
-          char = c;
-          parentPlayer = p;
+  let foundCharacter = null;
+  let foundPlayer = null;
+
+  for (const game of games) {
+    for (const player of game.players || []) {
+      for (const character of player.characters || []) {
+        if (character.id === parseInt(characterId, 10)) {
+          foundCharacter = character;
+          foundPlayer = player;
+          break;
         }
-      })
-    )
-  );
+      }
+      if (foundCharacter) break;
+    }
+    if (foundCharacter) break;
+  }
+
+  const char = foundCharacter;
+  const parentPlayer = foundPlayer;
 
 
   const handleDelete = async () => {
+    setIsDeleting(true);
     const res = await fetch(`/characters/${char.id}`, {
       method: "DELETE",
       credentials: "include",
     });
     if (res.ok) {
-      setSessionData(prev => ({
+      // Remove deleted character from session state
+      const updatedGames = [];
+
+      for (const game of sessionData.user.games) {
+        // For each player in the game, filter out the deleted character
+        const updatedPlayers = game.players.map((player) => {
+          const updatedCharacters = (player.characters || []).filter(
+            (ch) => ch.id !== char.id
+          );
+          return { ...player, characters: updatedCharacters };
+        });
+        updatedGames.push({ ...game, players: updatedPlayers });
+      }
+
+      setSessionData((prev) => ({
         ...prev,
         user: {
           ...prev.user,
-          games: prev.user.games.map(g => ({
-            ...g,
-            players: g.players.map(p => ({
-              ...p,
-              characters: (p.characters||[]).filter(ch => ch.id !== char.id)
-            }))
-          }))
-        }
+          games: updatedGames,
+        },
       }));
       navigate(`/players/${parentPlayer.id}`);
+    } else {
+      setIsDeleting(false);
     }
   };
-
-  let content;
   if (!char) {
-    content = (
+    return (
       <div>
         <p>Character not found.</p>
         <Link to="/dashboard">Back to Dashboard</Link>
       </div>
     );
-  } else if (isEditing) {
-    content = (
+  }
+
+  if (isEditing) {
+    return (
       <div>
         <h1>Edit Character</h1>
-        {/* Edit form JSX starts */}
         <Formik
           initialValues={{
             name: char.name,
@@ -88,19 +113,25 @@ function CharacterPage() {
               });
               if (!res.ok) throw new Error("Failed to update character");
               const updated = await res.json();
-              setSessionData(prev => ({
+              // Update character in session state
+              const updatedGames = [];
+
+              for (const game of sessionData.user.games) {
+                // For each player in the game, update the character if it matches
+                const updatedPlayers = game.players.map((player) => {
+                  const updatedCharacters = player.characters.map((ch) =>
+                    ch.id === updated.id ? updated : ch
+                  );
+                  return { ...player, characters: updatedCharacters };
+                });
+                updatedGames.push({ ...game, players: updatedPlayers });
+              }
+
+              setSessionData((prev) => ({
                 ...prev,
                 user: {
                   ...prev.user,
-                  games: prev.user.games.map(g => ({
-                    ...g,
-                    players: g.players.map(p => ({
-                      ...p,
-                      characters: p.characters.map(ch =>
-                        ch.id === updated.id ? updated : ch
-                      ),
-                    })),
-                  })),
+                  games: updatedGames,
                 },
               }));
               setIsEditing(false);
@@ -112,35 +143,36 @@ function CharacterPage() {
           }}
         >
           {({ isSubmitting }) => (
-            <Form>
-              {ErrorMessage.server && <div className="error">{ErrorMessage.server}</div>}
-              <FormField label="Name" name="name" />
-              <FormField label="Class" name="character_class" />
-              <FormField label="Level" name="level" type="number" />
-              <FormField label="Icon URL" name="icon" />
-              <div>
-                <label>
-                  <Field type="checkbox" name="is_active" />
-                  Active
-                </label>
-              </div>
-              <button type="submit" disabled={isSubmitting}>Save</button>
-              <button type="button" onClick={() => setIsEditing(false)}>
-                Cancel
-              </button>
-            </Form>
+            <div className="form-wrapper">
+              <Form>
+                <FormField label="Name" name="name" />
+                <FormField label="Class" name="character_class" />
+                <FormField label="Level" name="level" type="number" />
+                <FormField label="Icon URL" name="icon" />
+                <FormField label="Active" name="is_active" type="checkbox" />
+                <button type="submit" disabled={isSubmitting}>Save</button>
+                <button type="button" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</button>
+              </Form>
+            </div>
           )}
         </Formik>
       </div>
     );
-  } else {
-    content = (
-      <div>
-        <Link to={`/players/${parentPlayer.id}`}>← Back to Player</Link>
+  }
+  return (
+    <div className="character-page">
+      <Link to={`/players/${parentPlayer.id}`}>← Back to Player</Link>
+      <div className="character-card">
         <h1>{char.name}</h1>
         <p><strong>Class:</strong> {char.character_class}</p>
         <p><strong>Level:</strong> {char.level}</p>
-        {char.icon && <img src={char.icon} alt={`${char.name} icon`} style={{maxWidth: "100px"}} />}
+        {char.icon && (
+          <img
+            src={char.icon}
+            alt={`${char.name} icon`}
+            style={{ maxWidth: "100px" }}
+          />
+        )}
         <p><strong>Status:</strong> {char.is_active ? "Active" : "Inactive"}</p>
         <p><strong>Created by:</strong> <Link to={`/players/${parentPlayer.id}`}>{parentPlayer.name}</Link></p>
         <div>
@@ -151,13 +183,11 @@ function CharacterPage() {
         </div>
         <div style={{ marginTop: "1rem" }}>
           <button onClick={() => setIsEditing(true)}>Edit</button>
-          <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }}>Delete</button>
+          <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }} disabled={isDeleting}>Delete</button>
         </div>
       </div>
-    );
-  }
-
-  return content;
+    </div>
+  );
 }
 
 export default CharacterPage;

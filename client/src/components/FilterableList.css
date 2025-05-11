@@ -1,0 +1,31 @@
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: rgba(245, 245, 220, 0.85); /* parchment-like overlay */
+  padding: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.filter-control label {
+  font-weight: bold;
+  margin-right: 0.5rem;
+  color: #3e2c16; /* rich brown for legibility */
+}
+
+.filter-control select {
+  padding: 0.3rem 0.5rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  border: 1px solid #7f5f3c;
+  background-color: #f9f6ee; /* cream parchment */
+  color: #2d1b08;
+}
+
+.filterable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

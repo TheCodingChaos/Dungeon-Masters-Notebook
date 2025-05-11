@@ -1,11 +1,14 @@
-import callApi from "../utils/CallApi"
+import callApi from "../utils/CallApi";
 import FormField from "./FormField";
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
+import "../styles/pages.css";
+import "../components/FormField.css";
 
+// Define validation schema for the login form
 const LoginSchema = Yup.object({
   username: Yup.string().required("Required"),
   password: Yup.string().required("Required"),
@@ -16,33 +19,53 @@ function Login() {
   const navigate = useNavigate();
 
   return (
-    <Formik
-      initialValues={{ username: "", password: "" }}
-      validationSchema={LoginSchema}
-      onSubmit={async (values, { setSubmitting, setErrors }) => {
-        try {
-          await callApi("/login", { method: "POST", body: JSON.stringify(values) });
-          const sessionUser = await callApi("/check_session");
-          setSessionData(prev => ({ ...prev, user: sessionUser }));
-          navigate("/dashboard");
-        } catch (err) {
-          setErrors({ server: err.message });
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-    >
-      {({ isSubmitting, errors }) => (
-        <Form>
-          {errors.server && <div>{errors.server}</div>}
-          <FormField label="Username" name="username" type="text" />
-          <FormField label="Password" name="password" type="password" />
-          <button type="submit" disabled={isSubmitting}>
-            Login
-          </button>
-        </Form>
-      )}
-    </Formik>
+    <div className="auth-page">
+      <Formik
+        initialValues={{ username: "", password: "" }}
+        validationSchema={LoginSchema}
+        onSubmit={async (values, { setSubmitting, setErrors }) => {
+          try {
+            // Send login request
+            await callApi("/login", {
+              method: "POST",
+              body: JSON.stringify(values),
+            });
+
+            // If successful, get user session and navigate to dashboard
+            const sessionUser = await callApi("/check_session");
+            setSessionData(prev => ({ ...prev, user: sessionUser }));
+            navigate("/dashboard");
+
+          } catch (err) {
+            // Set server error to display in form
+            setErrors({ server: err.message });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
+      >
+        {({ isSubmitting, errors }) => (
+          <div className="form-wrapper">
+            <Form>
+              {/* Display server error if exists */}
+              {errors.server && <div className="error">{errors.server}</div>}
+
+              {/* Username input field */}
+              <FormField label="Username" name="username" type="text" />
+
+              {/* Password input field */}
+              <FormField label="Password" name="password" type="password" />
+
+              {/* Submit button */}
+              <button type="submit" disabled={isSubmitting}>
+                Login
+              </button>
+            </Form>
+          </div>
+        )}
+      </Formik>
+    </div>
   );
 }
+
 export default Login;

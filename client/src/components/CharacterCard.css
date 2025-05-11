@@ -1,0 +1,48 @@
+
+
+.character-card {
+  display: flex;
+  align-items: center;
+  background-color: rgba(25, 25, 25, 0.85);
+  color: #f0e8d0;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.character-card img {
+  max-width: 40px;
+  border-radius: 4px;
+}
+
+.character-card a {
+  font-weight: bold;
+  color: #90e0ff;
+  text-decoration: none;
+}
+
+.character-card a:hover {
+  text-decoration: underline;
+}
+
+.character-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #dcd0b0;
+}
+
+.character-card button {
+  background-color: #5a4327;
+  color: #fff2d9;
+  border: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.character-card button:hover {
+  background-color: #7b5e38;
+}
