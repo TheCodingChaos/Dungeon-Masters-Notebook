@@ -121,7 +121,6 @@ export default function NewGameWithAssignments(props) {
             {function (formikProps) {
                 const values = formikProps.values;
                 const isSubmitting = formikProps.isSubmitting;
-                const validateForm = formikProps.validateForm;
                 const setFieldError = formikProps.setFieldError;
                 return (
                     <div>
