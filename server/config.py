@@ -31,7 +31,7 @@ bcrypt = Bcrypt(app)
 
 api = Api(app)
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=["https://dungeon-masters-notebook.onrender.com"])
 
 ma = Marshmallow(app)
 
