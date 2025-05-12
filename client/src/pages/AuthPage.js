@@ -31,6 +31,7 @@ function AuthPage() {
   return (
     <div className="auth-page">
       {/* Toggle button to switch between login and signup */}
+      
       <button onClick={handleToggleForm}>
         {isLogin ? "Switch to Sign Up" : "Switch to Login"}
       </button>

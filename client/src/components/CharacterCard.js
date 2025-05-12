@@ -43,38 +43,60 @@ export default function CharacterCard({ character }) {
       }
     );
     setShowEditModal(false);
-    setSessionData(prev => ({
-      ...prev,
-      user: {
-        ...prev.user,
-        games: prev.user.games.map(g => ({
-          ...g,
-          players: g.players.map(p => ({
-            ...p,
-            characters: p.characters.map(ch => ch.id === id ? updated : ch)
-          }))
-        }))
+    setSessionData(prev => {
+      const updatedGamesList = [];
+      for (let i = 0; i < prev.user.games.length; i++) {
+        const g = prev.user.games[i];
+        const updatedPlayersList = [];
+        for (let j = 0; j < g.players.length; j++) {
+          const p = g.players[j];
+          const updatedCharsList = [];
+          for (let k = 0; k < p.characters.length; k++) {
+            const ch = p.characters[k];
+            if (ch.id === id) {
+              updatedCharsList.push(updated);
+            } else {
+              updatedCharsList.push(ch);
+            }
+          }
+          updatedPlayersList.push({ ...p, characters: updatedCharsList });
+        }
+        updatedGamesList.push({ ...g, players: updatedPlayersList });
       }
-    }));
+      return {
+        ...prev,
+        user: { ...prev.user, games: updatedGamesList }
+      };
+    });
   };
 
   // Handler for confirming delete
   const handleDeleteConfirm = async () => {
     await callApi(`/characters/${id}`, { method: 'DELETE' });
     setShowDeleteModal(false);
-    setSessionData(prev => ({
-      ...prev,
-      user: {
-        ...prev.user,
-        games: prev.user.games.map(g => ({
-          ...g,
-          players: g.players.map(p => ({
-            ...p,
-            characters: p.characters.filter(ch => ch.id !== id)
-          }))
-        }))
+    setSessionData(prev => {
+      const updatedGamesList = [];
+      for (let i = 0; i < prev.user.games.length; i++) {
+        const g = prev.user.games[i];
+        const updatedPlayersList = [];
+        for (let j = 0; j < g.players.length; j++) {
+          const p = g.players[j];
+          const filteredChars = [];
+          for (let k = 0; k < p.characters.length; k++) {
+            const ch = p.characters[k];
+            if (ch.id !== id) {
+              filteredChars.push(ch);
+            }
+          }
+          updatedPlayersList.push({ ...p, characters: filteredChars });
+        }
+        updatedGamesList.push({ ...g, players: updatedPlayersList });
       }
-    }));
+      return {
+        ...prev,
+        user: { ...prev.user, games: updatedGamesList }
+      };
+    });
   };
 
   // Define the edit modal

@@ -200,7 +200,7 @@ export default function NewGameWithAssignments(props) {
                                 }}
                             </FieldArray>
 
-                            <button type="submit" disabled={isSubmitting}>Create Game with Assignments</button>
+                            <button type="submit" disabled={isSubmitting}>Create Game</button>
                         </Form>
 
                         {/* Modal for inline new player or character */}

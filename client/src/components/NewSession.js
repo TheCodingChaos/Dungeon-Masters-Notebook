@@ -2,7 +2,8 @@ import { useContext } from "react";
 import FormField from "./FormField";
 import { SessionContext } from "../contexts/SessionContext";
 import * as Yup from "yup";
-import CrudForm from "../hooks/UseCRUDForm";
+import { Formik, Form } from 'formik';
+import callApi from '../utils/CallApi';
 
 // Define validation schema for a new session
 const NewSessionSchema = Yup.object({
@@ -15,60 +16,45 @@ export default function NewSession({ gameId, onSuccess }) {
   const { setSessionData } = useContext(SessionContext);
 
   return (
-    <CrudForm
-      path={`/games/${gameId}/sessions`}
-      initialValues={{
-        date: "",
-        summary: "",
-      }}
+    <Formik
+      initialValues={{ date: '', summary: '' }}
       validationSchema={NewSessionSchema}
-      onSubmitSuccess={(newSession) => {
-        // Copy the previous games array
-        const updatedGames = [];
-
-        // Loop through the previous games
-        setSessionData((prev) => {
-          prev.user.games.forEach((g) => {
-            if (g.id === gameId) {
-              // If it's the current game, append the new session
-              const updatedGame = {
-                ...g,
-                sessions: [...(g.sessions || []), newSession],
-              };
-              updatedGames.push(updatedGame);
-            } else {
-              // Otherwise, leave the game unchanged
-              updatedGames.push(g);
+      onSubmit={async (values, { setSubmitting, resetForm, setErrors }) => {
+        try {
+          const newSession = await callApi(
+            `/games/${gameId}/sessions`,
+            {
+              method: 'POST',
+              body: JSON.stringify(values),
             }
+          );
+          // Update context: append to this game's sessions
+          setSessionData(prev => {
+            const updatedGames = prev.user.games.map(g => {
+              if (g.id === gameId) {
+                return { ...g, sessions: [...(g.sessions||[]), newSession] };
+              }
+              return g;
+            });
+            return { ...prev, user: { ...prev.user, games: updatedGames } };
           });
-
-          // Update the session context with the modified games list
-          return {
-            ...prev,
-            user: {
-              ...prev.user,
-              games: updatedGames,
-            },
-          };
-        });
-
-        // Trigger any additional success handler
-        if (onSuccess) onSuccess(newSession);
+          resetForm();
+          if (onSuccess) onSuccess(newSession);
+        } catch (err) {
+          setErrors({ server: err.message });
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
-      {/* Input for session date */}
-      <FormField
-        label="Date"
-        name="date"
-        type="date"
-      />
-
-      {/* Input for session summary */}
-      <FormField
-        label="Summary"
-        name="summary"
-        as="textarea"
-      />
-    </CrudForm>
+      {({ isSubmitting, errors }) => (
+        <Form>
+          {errors.server && <div className="error">{errors.server}</div>}
+          <FormField label="Date" name="date" type="date" />
+          <FormField label="Summary" name="summary" as="textarea" />
+          <button type="submit" disabled={isSubmitting}>Save</button>
+        </Form>
+      )}
+    </Formik>
   );
 }

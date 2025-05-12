@@ -1,5 +1,5 @@
 .game-card {
-  background-color: rgba(20, 20, 20, 0.85); /* subtle glassy dark layer */
+  background-color: #3f3423dc; /* subtle glassy dark layer */
   color: #f0f0f0;
   border-radius: 8px;
   padding: 1.5rem;
@@ -25,10 +25,6 @@
   gap: 1rem;
 }
 
-.game-card:hover {
-  background-color: rgba(30, 30, 30, 0.9);
-  transition: background-color 0.2s ease;
-}
 
 .game-card:hover {
   box-shadow: 0 0 12px #5af2ff88;

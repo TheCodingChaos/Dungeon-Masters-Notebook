@@ -9,44 +9,43 @@ import "./FilterableList.css";
  *   - renderItem: Function to render each item
  */
 function FilterableList({ filters, items, renderItem }) {
-  // Render dropdowns for each filter
-  const renderFilters = () => {
-    return filters.map((filter, index) => {
-      const { label, options, value, onChange } = filter;
+  // Precompute filterElements and itemElements using for-loops
+  const filterElements = [];
+  for (let i = 0; i < filters.length; i++) {
+    const { label, options, value, onChange } = filters[i];
+    filterElements.push(
+      <div key={label} className="filter-control">
+        <label className="filter-label">{label}</label>
+        <select value={value} onChange={onChange}>
+          <option value="">All</option>
+          {options.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
 
-      return (
-        <div key={index} className="filter-control">
-          <label className="filter-label">{label}</label>
-          <select value={value} onChange={onChange}>
-            <option value="">All</option>
-            {options.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-      );
-    });
-  };
-
-  // Render all items using provided render function
-  const renderItems = () => {
-    return items.map((item, idx) => (
-      <div key={idx} className="filterable-item">
+  const itemElements = [];
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    itemElements.push(
+      <div key={item.id} className="filterable-item">
         {renderItem(item)}
       </div>
-    ));
-  };
+    );
+  }
 
   return (
     <div className="filterable-container">
       {/* Filter controls section */}
       <div className="filter-controls">
-        {renderFilters()}
+        {filterElements}
       </div>
 
       {/* Filtered results */}
       <div className="filterable-list">
-        {renderItems()}
+        {itemElements}
       </div>
     </div>
   );

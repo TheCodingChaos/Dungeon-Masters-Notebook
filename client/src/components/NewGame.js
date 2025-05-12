@@ -1,6 +1,7 @@
+import { Formik, Form } from 'formik';
+import callApi from '../utils/CallApi';
 import FormField from "./FormField";
 import * as Yup from "yup";
-import CrudForm from "../hooks/UseCRUDForm";
 
 // Define validation schema for new game form
 const NewGameSchema = Yup.object({
@@ -12,36 +13,47 @@ const NewGameSchema = Yup.object({
   setting: Yup.string(),
 });
 
-// Renders a form to create a new game
 export default function NewGame({ onSuccess }) {
   return (
-    <CrudForm
-      path="/games"
+    <Formik
       initialValues={{
-        title: "",
-        system: "",
-        status: "",
-        description: "",
-        start_date: "",
-        setting: "",
+        title: '',
+        system: '',
+        status: '',
+        description: '',
+        start_date: '',
+        setting: '',
       }}
       validationSchema={NewGameSchema}
-      onSubmitSuccess={(newGame) => {
-        if (onSuccess) onSuccess(newGame);
+      onSubmit={async (values, { setSubmitting, resetForm, setErrors }) => {
+        try {
+          const newGame = await callApi('/games', {
+            method: 'POST',
+            body: JSON.stringify(values),
+          });
+          resetForm();
+          if (onSuccess) onSuccess(newGame);
+        } catch (err) {
+          setErrors({ server: err.message });
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
-      {/* Form fields for each game attribute */}
-      <FormField label="Title" name="title" />
-      
-      <FormField label="System" name="system" />
-      
-      <FormField label="Status" name="status" />
-      
-      <FormField label="Description" name="description" as="textarea" />
-      
-      <FormField label="Start Date" name="start_date" type="date" />
-      
-      <FormField label="Setting" name="setting" />
-    </CrudForm>
+      {({ isSubmitting, errors }) => (
+        <Form>
+          {errors.server && <div className="error">{errors.server}</div>}
+          <FormField label="Title" name="title" />
+          <FormField label="System" name="system" />
+          <FormField label="Status" name="status" />
+          <FormField label="Description" name="description" as="textarea" />
+          <FormField label="Start Date" name="start_date" type="date" />
+          <FormField label="Setting" name="setting" />
+          <button type="submit" disabled={isSubmitting}>
+            Save
+          </button>
+        </Form>
+      )}
+    </Formik>
   );
 }

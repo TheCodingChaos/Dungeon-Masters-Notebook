@@ -1,0 +1,28 @@
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.5);
+  z-index: 99999;  /* bump this way up */
+}
+
+.modal-content {
+  position: relative;
+  z-index: 100000; /* above the overlay itself */
+  background: white;         /* white panel behind content */
+  padding: 1rem;            /* some inner spacing */
+  border-radius: 4px;       /* rounded corners */
+  max-width: 90vw;          /* fit within viewport */
+  margin: 5% auto;          /* center horizontally, some vertical offset */
+  overflow: auto;           /* scroll if content too tall */
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
