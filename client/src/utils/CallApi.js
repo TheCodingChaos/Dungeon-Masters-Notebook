@@ -4,9 +4,10 @@
  * @param {object} [options={}] - fetch options (method, headers, body, etc.).
  * @returns {Promise<any>} - resolved JSON response or throws on HTTP error.
  */
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 
 export async function callApi(path, options = {}) {
-  const response = await fetch(path, {
+  const response = await fetch(`${BASE_URL}${path}`, {
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...options,
