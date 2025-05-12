@@ -35,10 +35,15 @@ function NewCharacter({ gameId, playerId, onSuccess, character = null, submitLab
       ?.players || [];
   }
 
-  // Ensure players are valid entries with numeric IDs
-  const validPlayers = Array.isArray(playersList)
-    ? playersList.filter(p => p && typeof p.id === 'number')
+  // Deduplicate players by ID and ensure entries have numeric IDs
+  const dedupedPlayers = Array.isArray(playersList)
+    ? Array.from(
+        new Map(playersList.map(p => [p.id, p])).values()
+      )
     : [];
+  const validPlayers = dedupedPlayers.filter(
+    p => p && typeof p.id === 'number'
+  );
 
   return (
     <Formik
@@ -53,9 +58,10 @@ function NewCharacter({ gameId, playerId, onSuccess, character = null, submitLab
       validationSchema={CharacterSchema}
       onSubmit={async (values, { setSubmitting, resetForm }) => {
         try {
+          // Post to the Players->Characters endpoint; include game_id in payload
           const payload = { ...values, game_id: gameId };
           const newChar = await callApi(
-            `/games/${gameId}/players/${values.player_id}/characters`,
+            `/players/${values.player_id}/characters`,
             {
               method: "POST",
               body: JSON.stringify(payload)

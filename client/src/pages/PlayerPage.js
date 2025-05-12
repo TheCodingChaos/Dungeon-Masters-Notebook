@@ -8,6 +8,8 @@ import "../styles/pages.css";
 import "../components/PlayerCard.css";
 import "../components/CharacterCard.css";
 import "../components/FormField.css";
+import Modal from "../components/Modal";
+import NewCharacter from "../components/NewCharacter";
 
 const EditPlayerSchema = Yup.object({
   name: Yup.string().required("Name is required"),
@@ -25,6 +27,13 @@ function PlayerPage() {
   const player = games
     .flatMap(g => g.players || [])
     .find(p => p.id === parseInt(playerId, 10));
+  // Offer all games for character assignment
+  const gamesWithPlayer = games;
+  // Modal open state and selected game for new character
+  const [showModal, setShowModal] = useState(false);
+  const [selectedGameId, setSelectedGameId] = useState(
+    gamesWithPlayer[0]?.id || ""
+  );
 
 
   // Delete handler
@@ -121,11 +130,20 @@ function PlayerPage() {
   const gameMap = new Map();
   games.forEach(g => gameMap.set(g.id, g.title));
 
+  // Gather all characters for this player across every game
+  const allCharacters = games.reduce((acc, g) => {
+    const pl = (g.players || []).find(p => p.id === player.id);
+    if (pl && Array.isArray(pl.characters)) {
+      acc.push(...pl.characters);
+    }
+    return acc;
+  }, []);
+
   // Preprocess character list for display
   let characterListItems = [];
 
-  if (player.characters.length > 0) {
-    player.characters.forEach((c) => {
+  if (allCharacters.length > 0) {
+    characterListItems = allCharacters.map(c => {
       const gameTitle = gameMap.get(c.game_id) || "?";
 
       const handleToggleActive = async () => {
@@ -161,7 +179,7 @@ function PlayerPage() {
         }
       };
 
-      const listItem = (
+      return (
         <li key={c.id} className="character-item">
           {c.icon && (
             <img
@@ -184,8 +202,6 @@ function PlayerPage() {
           </div>
         </li>
       );
-
-      characterListItems.push(listItem);
     });
   } else {
     characterListItems = [<li key="no-characters">No characters yet</li>];
@@ -206,6 +222,55 @@ function PlayerPage() {
           {characterListItems}
         </ul>
       </div>
+      {/* Button to open add-character modal */}
+      <button style={{ marginTop: '1rem' }} onClick={() => setShowModal(true)}>
+        + New Character
+      </button>
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
+        <div style={{ padding: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+            Game:&nbsp;
+            <select
+              value={selectedGameId}
+              onChange={e => setSelectedGameId(Number(e.target.value))}
+            >
+              <option value="" disabled>Select game</option>
+              {gamesWithPlayer.map(g => (
+                <option key={g.id} value={g.id}>{g.title}</option>
+              ))}
+            </select>
+          </label>
+          <NewCharacter
+            gameId={selectedGameId}
+            playerId={player.id}
+            onSuccess={newChar => {
+              // jump selector to the game we just added to
+              setSelectedGameId(newChar.game_id);
+              setShowModal(false);
+              // update context with the new character
+              setSessionData(prev => {
+                const updatedGames = prev.user.games.map(g => {
+                  if (g.id !== newChar.game_id) return g;
+                  const existingPlayers = g.players || [];
+                  const hasPlayer = existingPlayers.some(p => p.id === newChar.player_id);
+                  const updatedPlayers = hasPlayer
+                    ? existingPlayers.map(p =>
+                        p.id === newChar.player_id
+                          ? { ...p, characters: [...(p.characters || []), newChar] }
+                          : p
+                      )
+                    : [
+                        ...existingPlayers,
+                        { ...player, characters: [newChar] }
+                      ];
+                  return { ...g, players: updatedPlayers };
+                });
+                return { ...prev, user: { ...prev.user, games: updatedGames } };
+              });
+            }}
+          />
+        </div>
+      </Modal>
       {/* Edit and Delete buttons section */}
       <div className="player-actions">
         <button onClick={() => setIsEditing(true)}>Edit</button>

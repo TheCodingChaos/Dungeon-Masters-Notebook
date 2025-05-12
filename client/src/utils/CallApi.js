@@ -11,6 +11,14 @@ export async function callApi(path, options = {}) {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+  // If no content (204), return null instead of parsing JSON
+  if (response.status === 204) {
+    if (!response.ok) {
+      // Even for 204, if not OK, throw error without JSON body
+      throw new Error(`API error: ${response.status}`);
+    }
+    return null;
+  }
   const data = await response.json();
   if (!response.ok) {
     // If the server returned an error object, propagate that message

@@ -78,7 +78,8 @@ class NewGame(Resource):
     def get(self):
         user_id = session.get('user_id')
         stmt = select(Game).filter_by(user_id=user_id)
-        games = db.session.scalars(stmt).all()
+        result = db.session.execute(stmt)  # execute SQL statement
+        games = result.scalars().all()     # load ORM objects
         return games_schema.dump(games), 200
 
     def post(self):
@@ -288,6 +289,73 @@ class NewPlayerAndCharacter(Resource):
         if new_char:
             result['character'] = character_schema.dump(new_char)
         return result, 201
+    
+class NewGameWithAssignments(Resource):
+    def post(self):
+        data = request.get_json() or {}
+        # Pull off the list of player/character assignments
+        assignments = data.pop('assignments', [])
+        # Make sure it’s owned by the current user
+        data['user_id'] = session.get('user_id')
+
+        # 1) Validate and create the Game
+        try:
+            game_data = game_schema.load(data)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        new_game = Game(**game_data)
+        db.session.add(new_game)
+        db.session.flush()
+        db.session.refresh(new_game)
+
+        # 2) Loop through each assignment
+        for assign in assignments:
+            # Existing player case
+            if 'player_id' in assign:
+                char_info = assign.get('character', {})
+                char_info['player_id'] = assign['player_id']
+                char_info['game_id'] = new_game.id
+                try:
+                    loaded_char = character_schema.load(char_info)
+                except ValidationError as err:
+                    db.session.rollback()
+                    return {'errors': err.messages}, 400
+                new_char = Character(**loaded_char)
+                db.session.add(new_char)
+
+            # New player + character case
+            elif 'player' in assign:
+                player_info = assign['player'] or {}
+                try:
+                    loaded_player = player_schema.load(player_info)
+                except ValidationError as err:
+                    db.session.rollback()
+                    return {'errors': err.messages}, 400
+                new_player = Player(**loaded_player)
+                db.session.add(new_player)
+                db.session.flush()
+                db.session.refresh(new_player)
+
+                char_info = assign.get('character', {})
+                char_info['player_id'] = new_player.id
+                char_info['game_id'] = new_game.id
+                try:
+                    loaded_char = character_schema.load(char_info)
+                except ValidationError as err:
+                    db.session.rollback()
+                    return {'errors': err.messages}, 400
+                new_char = Character(**loaded_char)
+                db.session.add(new_char)
+
+            else:
+                # skip any entries without player or player_id
+                continue
+
+        # 3) Commit everything together
+        db.session.commit()
+
+        # 4) Return the newly created game with its nested relationships
+        return game_schema.dump(new_game), 201
 
 
 # Register RESTful resources
@@ -297,13 +365,13 @@ api.add_resource(CheckSession, '/check_session')
 api.add_resource(Logout, '/logout')
 api.add_resource(NewGame, '/games')
 api.add_resource(EditGame, '/games/<int:game_id>')
-api.add_resource(NewPlayer, '/games/<int:game_id>/players')
 api.add_resource(EditPlayer, '/players/<int:player_id>')
 api.add_resource(NewSession, '/games/<int:game_id>/sessions')
 api.add_resource(EditSession, '/sessions/<int:session_id>')
 api.add_resource(NewCharacter, '/players/<int:player_id>/characters')
 api.add_resource(EditCharacter, '/characters/<int:character_id>')
-api.add_resource(NewPlayerAndCharacter, '/games/<int:game_id>/newplayercharacter')
+api.add_resource(NewPlayerAndCharacter, '/games/<int:game_id>/players')
+api.add_resource(NewGameWithAssignments, '/games/new')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

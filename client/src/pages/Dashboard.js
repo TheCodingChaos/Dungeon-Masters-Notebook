@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { SessionContext } from "../contexts/SessionContext";
-import NewGame from "../components/NewGame";
+import NewGameWithAssignments from "../components/NewGameWithAssignments";
 import NewPlayer from "../components/NewPlayer";
 import GameCard from "../components/GameCard";
 import "../styles/pages.css";
@@ -19,12 +19,13 @@ export default function Dashboard() {
 
   // Handle when a new game is created
   function handleGameCreated(newGame) {
-    setSessionData(function(prev) {
+    setSessionData(function (prev) {
+      const updatedGames = [...(prev.user.games || []), newGame];
       return {
         ...prev,
         user: {
           ...prev.user,
-          games: [...(prev.user.games || []), newGame],
+          games: updatedGames,
         },
       };
     });
@@ -32,7 +33,7 @@ export default function Dashboard() {
 
   // Handle when a new player is created and added to a game
   function handlePlayerCreated(gameId, newPlayer) {
-    setSessionData(function(prev) {
+    setSessionData(function (prev) {
       // Create updated games array with new player added to the correct game
       const updatedGames = [];
       for (let i = 0; i < prev.user.games.length; i++) {
@@ -58,7 +59,7 @@ export default function Dashboard() {
 
   // Handle when a new character is created and added to a player in a game
   function handleCharacterCreated(gameId, newChar) {
-    setSessionData(function(prev) {
+    setSessionData(function (prev) {
       // Create updated games array with new character added to the correct player
       const updatedGames = [];
       for (let i = 0; i < prev.user.games.length; i++) {
@@ -100,7 +101,7 @@ export default function Dashboard() {
       {/* List of game cards */}
       {games.length > 0 ? (
         // Render each game as a card inside a wrapper
-        games.map(function(game) {
+        games.map(function (game) {
           return (
             <div key={game.id}>
               <div className="game-card-wrapper">
@@ -115,22 +116,20 @@ export default function Dashboard() {
       {/* Form section for creating games and players */}
       <div className="dashboard-form-section">
         <div className="form-wrapper">
-          <h3>New Game</h3>
-          <NewGame onSuccess={handleGameCreated} />
+          <h3>New Game & Assignments</h3>
+          <NewGameWithAssignments onSuccess={handleGameCreated} />
         </div>
         <div className="form-wrapper">
           <h3>New Player</h3>
           <NewPlayer
             gameId={games[0]?.id || null}
-            onSuccess={function(newPlayer, newChar) {
-              // Only handle if there's at least one game
-              if (!games[0]) return;
-              handlePlayerCreated(games[0].id, newPlayer);
+            onSuccess={function (gameId, newPlayer, newChar) {
+              if (!gameId) return;
+              handlePlayerCreated(gameId, newPlayer);
               if (newChar) {
-                handleCharacterCreated(games[0].id, newChar);
+                handleCharacterCreated(gameId, newChar);
               }
-            }}
-          />
+            }} />
         </div>
       </div>
     </div>

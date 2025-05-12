@@ -1,16 +1,13 @@
-
-
 import { useContext, useState } from "react";
 import { SessionContext } from "../contexts/SessionContext";
-import NewCharacter from "./NewCharacter";
 import FilterableList from "./FilterableList";
 import CharacterCard from "./CharacterCard";
+import NewCharacter from "./NewCharacter"
 
 export default function AllCharacters() {
     const { sessionData, setSessionData } = useContext(SessionContext);
     const [filterGameId, setFilterGameId] = useState("");
     const [filterPlayerId, setFilterPlayerId] = useState("");
-    const [newCharGameId, setNewCharGameId] = useState("");
     const [editingId, setEditingId] = useState(null);
 
     const games = sessionData.user?.games || [];
@@ -19,7 +16,12 @@ export default function AllCharacters() {
     games.forEach(game => {
       (game.players || []).forEach(player => {
         (player.characters || []).forEach(character => {
-          allCharacters.push({ ...character, game, player });
+          allCharacters.push({
+            ...character,
+            game,
+            player,
+            gameTitle: game.title,  // add direct title for convenience
+          });
         });
       });
     });
@@ -29,7 +31,8 @@ export default function AllCharacters() {
     // Filter by game/player if selected, using early returns for readability
     let filtered = uniqueChars;
     if (filterGameId) {
-      filtered = filtered.filter(c => String(c.game.id) === filterGameId);
+      // Match against character.game_id rather than wrapper game.id
+      filtered = filtered.filter(c => String(c.game_id) === filterGameId);
     }
     if (filterPlayerId) {
       filtered = filtered.filter(c => String(c.player.id) === filterPlayerId);
@@ -44,31 +47,6 @@ export default function AllCharacters() {
       ).values()
     );
 
-    // Handler for new character creation
-    const handleNewCharSuccess = (newChar) => {
-      setNewCharGameId("");
-      const updatedGames = sessionData.user.games.map(game => {
-        if (game.id !== newChar.game_id) return game;
-        const updatedPlayers = game.players.map(player => {
-          if (player.id !== newChar.player_id) return player;
-          return {
-            ...player,
-            characters: [...(player.characters || []), newChar],
-          };
-        });
-        return {
-          ...game,
-          players: updatedPlayers,
-        };
-      });
-      setSessionData(prev => ({
-        ...prev,
-        user: {
-          ...prev.user,
-          games: updatedGames,
-        },
-      }));
-    };
 
     // Edit handler
     const handleEdit = (character) => {
@@ -98,30 +76,6 @@ export default function AllCharacters() {
         }
     };
 
-    const newCharControls = (
-        <div style={{ marginBottom: "1rem" }}>
-            <label>
-                Create New Character in Game:{' '}
-                <select
-                    value={newCharGameId}
-                    onChange={e => setNewCharGameId(e.target.value)}
-                >
-                    <option value="">Select Game</option>
-                    {uniqueGames.map(g => (
-                        <option key={g.id} value={g.id}>{g.title}</option>
-                    ))}
-                </select>
-            </label>
-            {newCharGameId && (
-                <div style={{ marginTop: "0.5rem" }}>
-                    <NewCharacter
-                        gameId={+newCharGameId}
-                        onSuccess={handleNewCharSuccess}
-                    />
-                </div>
-            )}
-        </div>
-    );
 
     // Precompute filters array
     const filters = [
@@ -193,7 +147,6 @@ export default function AllCharacters() {
           items={filtered}
           renderItem={renderItem}
         />
-        {newCharControls}
       </div>
     );
 }

@@ -61,7 +61,7 @@ export default function PlayerCard({ player, gameId }) {
 
       {/* List of character cards */}
       <div className="characters-list">
-        {player.characters.map((c) => (
+        {player.characters.map(c => (
           <CharacterCard key={c.id} character={c} />
         ))}
       </div>
@@ -82,6 +82,7 @@ export default function PlayerCard({ player, gameId }) {
           }}
         />
       )}
+
     </div>
   );
 }
