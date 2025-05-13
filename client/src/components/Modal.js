@@ -12,12 +12,18 @@ import './Modal.css'
 export default function Modal({ isOpen, onClose, children }) {
   if (!isOpen) return null;
 
+  const handleOverlayClick = onClose;
+  const handleContentClick = function(event) {
+    event.stopPropagation();
+  };
+  const handleCloseClick = onClose;
+
   // Build the modal markup
   const modalTree = (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-content" onClick={handleContentClick}>
         <button
-          onClick={onClose}
+          onClick={handleCloseClick}
           className="modal-close"
           aria-label="Close modal"
         >

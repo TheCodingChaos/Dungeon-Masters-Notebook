@@ -18,38 +18,35 @@ function Signup() {
   const { setSessionData } = useContext(SessionContext);
   const navigate = useNavigate();
 
+  // Initial form values
+  const initialFormValues = { username: "", password: "" };
+
+  // Form submission handler
+  const handleFormSubmit = async (values, { setSubmitting, setErrors }) => {
+    try {
+      // Submit signup form
+      await callApi("/signup", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      // Fetch and set session
+      const sessionUser = await callApi("/check_session");
+      setSessionData((prev) => ({ ...prev, user: sessionUser }));
+      // Navigate to dashboard
+      navigate("/dashboard");
+    } catch (err) {
+      setErrors({ server: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="auth-page">
       <Formik
-        initialValues={{ username: "", password: "" }}
+        initialValues={initialFormValues}
         validationSchema={SignupSchema}
-        onSubmit={async (values, { setSubmitting, setErrors }) => {
-          try {
-            // Step 1: Submit signup form to the server
-            await callApi("/signup", {
-              method: "POST",
-              body: JSON.stringify(values),
-            });
-
-            // Step 2: Fetch user session after successful signup
-            const sessionUser = await callApi("/check_session");
-
-            // Step 3: Update session context
-            setSessionData((prev) => ({
-              ...prev,
-              user: sessionUser,
-            }));
-
-            // Step 4: Redirect to dashboard
-            navigate("/dashboard");
-          } catch (err) {
-            // Step 5: Handle any server-side errors
-            setErrors({ server: err.message });
-          } finally {
-            // Step 6: Turn off submitting indicator
-            setSubmitting(false);
-          }
-        }}
+        onSubmit={handleFormSubmit}
       >
         {({ isSubmitting, errors }) => (
           <div className="form-wrapper">

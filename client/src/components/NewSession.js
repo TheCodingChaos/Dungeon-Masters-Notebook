@@ -15,37 +15,43 @@ const NewSessionSchema = Yup.object({
 export default function NewSession({ gameId, onSuccess }) {
   const { setSessionData } = useContext(SessionContext);
 
+  // Initial form values
+  const initialFormValues = { date: '', summary: '' };
+
+  // Form submission handler
+  const handleFormSubmit = async (values, { setSubmitting, resetForm, setErrors }) => {
+    try {
+      const newSession = await callApi(
+        `/games/${gameId}/sessions`,
+        {
+          method: 'POST',
+          body: JSON.stringify(values),
+        }
+      );
+      // Update context: append to this game's sessions
+      setSessionData(prev => {
+        const updatedGames = prev.user.games.map(g => {
+          if (g.id === gameId) {
+            return { ...g, sessions: [...(g.sessions||[]), newSession] };
+          }
+          return g;
+        });
+        return { ...prev, user: { ...prev.user, games: updatedGames } };
+      });
+      resetForm();
+      if (onSuccess) onSuccess(newSession);
+    } catch (err) {
+      setErrors({ server: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Formik
-      initialValues={{ date: '', summary: '' }}
+      initialValues={initialFormValues}
       validationSchema={NewSessionSchema}
-      onSubmit={async (values, { setSubmitting, resetForm, setErrors }) => {
-        try {
-          const newSession = await callApi(
-            `/games/${gameId}/sessions`,
-            {
-              method: 'POST',
-              body: JSON.stringify(values),
-            }
-          );
-          // Update context: append to this game's sessions
-          setSessionData(prev => {
-            const updatedGames = prev.user.games.map(g => {
-              if (g.id === gameId) {
-                return { ...g, sessions: [...(g.sessions||[]), newSession] };
-              }
-              return g;
-            });
-            return { ...prev, user: { ...prev.user, games: updatedGames } };
-          });
-          resetForm();
-          if (onSuccess) onSuccess(newSession);
-        } catch (err) {
-          setErrors({ server: err.message });
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+      onSubmit={handleFormSubmit}
     >
       {({ isSubmitting, errors }) => (
         <Form>

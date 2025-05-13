@@ -63,71 +63,154 @@ export default function NewGameWithAssignments(props) {
 
     const [modalConfig, setModalConfig] = useState({ open: false, type: null, index: null });
 
+    // Initial form values
+    const initialFormValues = {
+      title: '',
+      system: '',
+      status: '',
+      description: '',
+      setting: '',
+      start_date: '',
+      assignments: [],
+    };
+
+    // Form submission handler
+    const handleSubmit = async (values, { setSubmitting, resetForm, setFieldError }) => {
+      // Manual validation of assignments
+      for (let idx = 0; idx < values.assignments.length; idx++) {
+        const a = values.assignments[idx];
+        if (!(a.player_id || (a.player && a.player.name))) continue;
+        if (a.player_id) {
+          if (!a.character.name) {
+            setFieldError(`assignments.${idx}.character.name`, 'Required');
+            setSubmitting(false);
+            return;
+          }
+        } else {
+          if (!a.player?.name) {
+            setFieldError(`assignments.${idx}.player.name`, 'Required');
+            setSubmitting(false);
+            return;
+          }
+          if (!a.character.name) {
+            setFieldError(`assignments.${idx}.character.name`, 'Required');
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+      try {
+        const filtered = values.assignments.filter(a =>
+          (a.player_id || a.player?.name) && a.character?.name
+        );
+        const payload = { ...values, assignments: filtered };
+        const newGame = await callApi('/games', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        resetForm();
+        if (onSuccess) onSuccess(newGame);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    // Add assignment from dropdown
+    const handleAddAssignment = (e, arrayHelpers) => {
+      const val = e.target.value;
+      if (!val) return;
+      let newAssign = getDefaultAssignment();
+      if (val === 'new') {
+        delete newAssign.player_id;
+        newAssign.player = { name: '', summary: '' };
+        arrayHelpers.push(newAssign);
+        setModalConfig({ open: true, type: 'player', index: arrayHelpers.form.values.assignments.length });
+      } else {
+        newAssign.player_id = Number(val);
+        arrayHelpers.push(newAssign);
+        setModalConfig({ open: true, type: 'character', index: arrayHelpers.form.values.assignments.length });
+      }
+    };
+
+    // Render assignment list items
+    const renderAssignmentItem = (assign, i, arrayHelpers) => {
+      if (!assign.character?.name) return null;
+      const playerName = assign.player_id
+        ? (uniquePlayers.find(p => p.id === assign.player_id)?.name)
+        : assign.player?.name;
+      return (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+          <span>{playerName} / {assign.character.name}</span>
+          <button
+            type="button"
+            onClick={() => setModalConfig({ open: true, type: assign.player ? 'player' : 'character', index: i })}
+            style={{ marginLeft: '8px' }}
+          >Edit</button>
+          <button
+            type="button"
+            onClick={() => arrayHelpers.remove(i)}
+            style={{ marginLeft: '4px' }}
+          >Remove</button>
+        </div>
+      );
+    };
+
+    // Render modal content
+    const renderModalContent = (formikProps) => {
+      const { setFieldError } = formikProps;
+      const { type, index } = modalConfig;
+      if (type === 'player') {
+        return (
+          <>
+            <FormField label="Player Name" name={`assignments.${index}.player.name`} />
+            <FormField label="Summary" name={`assignments.${index}.player.summary`} as="textarea" />
+            <button type="button" onClick={() => {
+              const name = formikProps.values.assignments[index].player?.name?.trim();
+              if (!name) {
+                setFieldError(`assignments.${index}.player.name`, 'Required');
+                return;
+              }
+              setModalConfig({ open: true, type: 'character', index });
+            }}>Next: Character</button>
+            <button type="button" onClick={() => setModalConfig({ open: false, type: null, index: null })} style={{ marginLeft: '8px' }}>Cancel</button>
+          </>
+        );
+      } else {
+        return (
+          <>
+            <FormField label="Character Name" name={`assignments.${index}.character.name`} />
+            <FormField label="Class" name={`assignments.${index}.character.character_class`} />
+            <FormField label="Level" name={`assignments.${index}.character.level`} type="number" />
+            <FormField label="Icon URL" name={`assignments.${index}.character.icon`} />
+            <FormField label="Active" name={`assignments.${index}.character.is_active`} type="checkbox" />
+            <button type="button" onClick={() => {
+              const char = formikProps.values.assignments[index].character;
+              if (!char.name?.trim()) {
+                setFieldError(`assignments.${index}.character.name`, 'Required');
+                return;
+              }
+              if (!char.character_class?.trim()) {
+                setFieldError(`assignments.${index}.character.character_class`, 'Required');
+                return;
+              }
+              setModalConfig({ open: false, type: null, index: null });
+            }}>Save Character</button>
+            <button type="button" onClick={() => setModalConfig({ open: false, type: null, index: null })} style={{ marginLeft: '8px' }}>Cancel</button>
+          </>
+        );
+      }
+    };
+
     return (
         <Formik
-            initialValues={{
-                title: '',
-                system: '',
-                status: '',
-                description: '',
-                setting: '',
-                start_date: '',
-                assignments: [],
-            }}
+            initialValues={initialFormValues}
             validationSchema={NewGameSchema}
-            onSubmit={async function (values, formikHelpers) {
-                var setSubmitting = formikHelpers.setSubmitting;
-                var resetForm = formikHelpers.resetForm;
-                var setFieldError = formikHelpers.setFieldError;
-                // Manual validation of assignments
-                for (let idx = 0; idx < values.assignments.length; idx++) {
-                    const a = values.assignments[idx];
-                    // skip empty rows
-                    if (!(a.player_id || (a.player && a.player.name))) continue;
-                    if (a.player_id) {
-                        // existing player: must have character name
-                        if (!a.character.name) {
-                            setFieldError(`assignments.${idx}.character.name`, 'Required');
-                            return;
-                        }
-                    } else {
-                        // new player: must have player name and character name
-                        if (!a.player || !a.player.name) {
-                            setFieldError(`assignments.${idx}.player.name`, 'Required');
-                            return;
-                        }
-                        if (!a.character.name) {
-                            setFieldError(`assignments.${idx}.character.name`, 'Required');
-                            return;
-                        }
-                    }
-                }
-                try {
-                    // Remove assignments without player and character
-                    const filtered = values.assignments.filter(a =>
-                        ((a.player_id) || (a.player && a.player.name)) && a.character && a.character.name
-                    );
-                    const payload = { ...values, assignments: filtered };
-
-                    var newGame = await callApi('/games', {
-                        method: 'POST',
-                        body: JSON.stringify(payload),
-                    });
-                    resetForm();
-                    if (onSuccess) {
-                        onSuccess(newGame);
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    setSubmitting(false);
-                }
-            }}
+            onSubmit={handleSubmit}
         >
             {function (formikProps) {
-                const values = formikProps.values;
                 const isSubmitting = formikProps.isSubmitting;
-                const setFieldError = formikProps.setFieldError;
                 return (
                     <div>
                         <Form>
@@ -141,147 +224,28 @@ export default function NewGameWithAssignments(props) {
 
                             {/* Assignments section */}
                             <FieldArray name="assignments">
-                                {function (arrayHelpers) {
-                                    return (
-                                        <div>
-                                            {/* List only completed assignments */}
-                                            {values.assignments.map(function (assign, i) {
-                                                if (!assign.character || !assign.character.name) return null;
-                                                // Determine display name
-                                                var playerName = assign.player_id
-                                                    ? ((uniquePlayers.find(function (p) { return p.id === assign.player_id; }) || {}).name)
-                                                    : assign.player && assign.player.name;
-                                                return (
-                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                                                        <span>{playerName} / {assign.character.name}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={function () {
-                                                                // If new player, reopen player modal first
-                                                                if (assign.player) {
-                                                                    setModalConfig({ open: true, type: 'player', index: i });
-                                                                } else {
-                                                                    setModalConfig({ open: true, type: 'character', index: i });
-                                                                }
-                                                            }}
-                                                            style={{ marginLeft: '8px' }}
-                                                        >Edit</button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={function () { arrayHelpers.remove(i); }}
-                                                            style={{ marginLeft: '4px' }}
-                                                        >Remove</button>
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {/* Single dropdown to add new assignment */}
-                                            <select
-                                                value=""
-                                                onChange={function (e) {
-                                                    const val = e.target.value;
-                                                    if (!val) return;
-                                                    let newAssign = getDefaultAssignment();
-                                                    if (val === 'new') {
-                                                        delete newAssign.player_id;
-                                                        newAssign.player = { name: '', summary: '' };
-                                                        arrayHelpers.push(newAssign);
-                                                        setModalConfig({ open: true, type: 'player', index: values.assignments.length });
-                                                    } else {
-                                                        newAssign.player_id = Number(val);
-                                                        arrayHelpers.push(newAssign);
-                                                        setModalConfig({ open: true, type: 'character', index: values.assignments.length });
-                                                    }
-                                                }}
-                                            >
-                                                <option value="" disabled>Add a player...</option>
-                                                {uniquePlayers.map(function (p) {
-                                                    return <option key={p.id} value={p.id}>{p.name}</option>;
-                                                })}
-                                                <option value="new">+ New Player...</option>
-                                            </select>
-                                        </div>
-                                    );
-                                }}
+                              {(arrayHelpers) => (
+                                <div>
+                                  {/* Existing assignments */}
+                                  {arrayHelpers.form.values.assignments.map((assign, i) =>
+                                    renderAssignmentItem(assign, i, arrayHelpers)
+                                  )}
+                                  {/* Dropdown to add */}
+                                  <select value="" onChange={(e) => handleAddAssignment(e, arrayHelpers)}>
+                                    <option value="" disabled>Add a player...</option>
+                                    {uniquePlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    <option value="new">+ New Player...</option>
+                                  </select>
+                                </div>
+                              )}
                             </FieldArray>
 
                             <button type="submit" disabled={isSubmitting}>Create Game</button>
                         </Form>
 
                         {/* Modal for inline new player or character */}
-                        <Modal
-                            isOpen={modalConfig.open}
-                            onClose={function () { setModalConfig({ open: false, type: null, index: null }); }}
-                        >
-                            {modalConfig.type === 'player' ? (
-                                <div>
-                                    <FormField label="Player Name" name={`assignments.${modalConfig.index}.player.name`} />
-                                    <FormField label="Summary" name={`assignments.${modalConfig.index}.player.summary`} as="textarea" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            // Validate new player name before advancing
-                                            const playerName = (values.assignments[modalConfig.index].player || {}).name || '';
-                                            if (!playerName.trim()) {
-                                                setFieldError(
-                                                    `assignments.${modalConfig.index}.player.name`,
-                                                    'Required'
-                                                );
-                                                return;
-                                            }
-                                            setModalConfig({ open: true, type: 'character', index: modalConfig.index });
-                                        }}
-                                    >
-                                        Next: Character
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setModalConfig({ open: false, type: null, index: null })}
-                                      style={{ marginLeft: '8px' }}
-                                    >
-                                      Cancel
-                                    </button>
-                                </div>
-                            ) : (
-                                <div>
-                                    <FormField label="Character Name" name={`assignments.${modalConfig.index}.character.name`} />
-                                    <FormField label="Class" name={`assignments.${modalConfig.index}.character.character_class`} />
-                                    <FormField label="Level" name={`assignments.${modalConfig.index}.character.level`} type="number" />
-                                    <FormField label="Icon URL" name={`assignments.${modalConfig.index}.character.icon`} />
-                                    <FormField label="Active" name={`assignments.${modalConfig.index}.character.is_active`} type="checkbox" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            // Validate character fields before closing
-                                            const char = values.assignments[modalConfig.index].character || {};
-                                            if (!char.name || !char.name.trim()) {
-                                                setFieldError(
-                                                    `assignments.${modalConfig.index}.character.name`,
-                                                    'Required'
-                                                );
-                                                return;
-                                            }
-                                            if (!char.character_class || !char.character_class.trim()) {
-                                                setFieldError(
-                                                    `assignments.${modalConfig.index}.character.character_class`,
-                                                    'Required'
-                                                );
-                                                return;
-                                            }
-                                            setModalConfig({ open: false, type: null, index: null });
-                                        }}
-                                    >
-                                        Save Character
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setModalConfig({ open: false, type: null, index: null })}
-                                      style={{ marginLeft: '8px' }}
-                                    >
-                                      Cancel
-                                    </button>
-                                </div>
-                            )}
+                        <Modal isOpen={modalConfig.open} onClose={() => setModalConfig({ open: false, type: null, index: null })}>
+                          {renderModalContent(formikProps)}
                         </Modal>
                     </div>
                 );

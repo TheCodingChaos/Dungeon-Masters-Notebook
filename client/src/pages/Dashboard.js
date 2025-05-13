@@ -11,11 +11,11 @@ export default function Dashboard() {
   const { sessionData, setSessionData } = useContext(SessionContext);
   const user = sessionData.user;
 
-  // If the user is not logged in, show nothing
-  if (!user) return null;
+  // Determine logged-in user and games list
+  const isUserLoggedIn = !!user;
+  const gamesList = user?.games || [];
 
-  // Get user's games, or empty array if none
-  const games = user.games || [];
+  if (!isUserLoggedIn) return null;
 
   // Handle when a new game is created
   function handleGameCreated(newGame) {
@@ -96,41 +96,47 @@ export default function Dashboard() {
     });
   }
 
+  // Render game cards or a message if none exist
+  const gameCards = gamesList.length > 0
+    ? gamesList.map((game) => (
+        <div key={game.id}>
+          <div className="game-card-wrapper">
+            <GameCard game={game} />
+          </div>
+        </div>
+      ))
+    : <p>No games found. Create one above!</p>;
+
+  // Handle NewPlayer onSuccess callback
+  const handleNewPlayerSuccess = (gameId, newPlayer, newChar) => {
+    if (!gameId) return;
+    handlePlayerCreated(gameId, newPlayer);
+    if (newChar) {
+      handleCharacterCreated(gameId, newChar);
+    }
+  };
+
+  // Sections for forms
+  const newGameSection = (
+    <div className="form-wrapper">
+      <h3>New Game</h3>
+      <NewGameWithAssignments onSuccess={handleGameCreated} />
+    </div>
+  );
+
+  const newPlayerSection = (
+    <div className="form-wrapper">
+      <h3>New Player & Initial Character</h3>
+      <NewPlayer gameId={gamesList[0]?.id || null} onSuccess={handleNewPlayerSuccess} />
+    </div>
+  );
+
   return (
     <div className="dash-page">
-      {/* List of game cards */}
-      {games.length > 0 ? (
-        // Render each game as a card inside a wrapper
-        games.map(function (game) {
-          return (
-            <div key={game.id}>
-              <div className="game-card-wrapper">
-                <GameCard game={game} />
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <p>No games found. Create one above!</p>
-      )}
-      {/* Form section for creating games and players */}
+      {gameCards}
       <div className="dashboard-form-section">
-        <div className="form-wrapper">
-          <h3>New Game</h3>
-          <NewGameWithAssignments onSuccess={handleGameCreated} />
-        </div>
-        <div className="form-wrapper">
-          <h3>New Player & Initial Character</h3>
-          <NewPlayer
-            gameId={games[0]?.id || null}
-            onSuccess={function (gameId, newPlayer, newChar) {
-              if (!gameId) return;
-              handlePlayerCreated(gameId, newPlayer);
-              if (newChar) {
-                handleCharacterCreated(gameId, newChar);
-              }
-            }} />
-        </div>
+        {newGameSection}
+        {newPlayerSection}
       </div>
     </div>
   );

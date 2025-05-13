@@ -1,4 +1,5 @@
 import { useContext, useState } from "react";
+import callApi from "../utils/CallApi";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { SessionContext } from "../contexts/SessionContext";
 import { Formik, Form } from "formik";
@@ -41,6 +42,38 @@ function PlayerPage() {
   );
 
 
+  // Edit form helpers for modal
+  const editInitialValues = {
+    name: player?.name || "",
+    summary: player?.summary || "",
+  };
+  const handleEditSubmit = async (values, { setSubmitting, setErrors }) => {
+    try {
+      // Use callApi to handle API request and errors
+      const updatedPlayer = await callApi(`/players/${player.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(values),
+      });
+      setSessionData(prev => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          games: prev.user.games.map(g => ({
+            ...g,
+            players: g.players.map(p =>
+              p.id === updatedPlayer.id ? { ...p, ...updatedPlayer } : p
+            ),
+          })),
+        },
+      }));
+      setIsEditing(false);
+    } catch (e) {
+      setErrors({ server: e.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Delete handler
   const handleDelete = async () => {
     const res = await fetch(`/players/${player.id}`, {
@@ -72,63 +105,6 @@ function PlayerPage() {
     );
   }
 
-  if (isEditing) {
-    return (
-      <div>
-        <h1>Edit Player</h1>
-        <Formik
-          initialValues={{
-            name: player.name || "",
-            summary: player.summary || "",
-          }}
-          validationSchema={EditPlayerSchema}
-          onSubmit={async (values, { setSubmitting, setErrors }) => {
-            try {
-              const res = await fetch(`/players/${player.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify(values),
-              });
-              if (!res.ok) throw new Error("Failed to update player");
-              const updatedPlayer = await res.json();
-              setSessionData(prev => ({
-                ...prev,
-                user: {
-                  ...prev.user,
-                  games: prev.user.games.map(g => ({
-                    ...g,
-                    players: g.players.map(p =>
-                      p.id === updatedPlayer.id ? { ...p, ...updatedPlayer } : p
-                    ),
-                  })),
-                },
-              }));
-              setIsEditing(false);
-            } catch (e) {
-              setErrors({ server: e.message });
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-        >
-          {({ isSubmitting, errors }) => (
-            <div className="form-wrapper">
-            <Form>
-              {errors.server && <div className="error">{errors.server}</div>}
-              <FormField label="Name" name="name" />
-              <FormField label="Summary" name="summary" as="textarea" />
-              <button type="submit" disabled={isSubmitting}>Save</button>
-              <button type="button" onClick={() => setIsEditing(false)} style={{ marginLeft: "0.5rem" }}>
-                Cancel
-              </button>
-            </Form>
-            </div>
-          )}
-        </Formik>
-      </div>
-    );
-  }
 
   // --- Refactored: preprocess character list and logic outside JSX return ---
   // Build a map from game id to title for fast lookup
@@ -214,6 +190,36 @@ function PlayerPage() {
 
   return (
     <div className="player-page">
+      {isEditing && (
+        <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+          <div style={{ padding: '1rem' }}>
+            <h1>Edit Player</h1>
+            <Formik
+              initialValues={editInitialValues}
+              validationSchema={EditPlayerSchema}
+              onSubmit={handleEditSubmit}
+            >
+              {({ isSubmitting, errors }) => (
+                <div className="form-wrapper">
+                  <Form>
+                    {errors.server && <div className="error">{errors.server}</div>}
+                    <FormField label="Name" name="name" />
+                    <FormField label="Summary" name="summary" as="textarea" />
+                    <button type="submit" disabled={isSubmitting}>Save</button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      style={{ marginLeft: '0.5rem' }}
+                    >
+                      Cancel
+                    </button>
+                  </Form>
+                </div>
+              )}
+            </Formik>
+          </div>
+        </Modal>
+      )}
       <Link to="/dashboard">← Back to Dashboard</Link>
       <div className="player-card">
         <h1>{player.name}</h1>

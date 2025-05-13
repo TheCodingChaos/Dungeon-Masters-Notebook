@@ -49,6 +49,23 @@ export default function PlayerCard({ player, gameId }) {
     });
   };
 
+  // Toggle the new character form visibility
+  const handleToggleForm = () => setShowForm(prev => !prev);
+
+  // Label for toggle button
+  const toggleButtonLabel = showForm ? 'Cancel' : '+ New Character';
+
+  // Rendered list of character cards
+  const characterCards = player.characters.map((c) => (
+    <CharacterCard key={c.id} character={c} />
+  ));
+
+  // Handle successful character add
+  const handleNewCharacterSuccess = (newChar) => {
+    setShowForm(false);
+    handleCharacterAdded(newChar);
+  };
+
   return (
     <div className="player-card">
       {/* Player name as a link */}
@@ -61,14 +78,12 @@ export default function PlayerCard({ player, gameId }) {
 
       {/* List of character cards */}
       <div className="characters-list">
-        {player.characters.map(c => (
-          <CharacterCard key={c.id} character={c} />
-        ))}
+        {characterCards}
       </div>
 
       {/* Button to toggle character creation form */}
-      <button onClick={() => setShowForm((f) => !f)}>
-        {showForm ? 'Cancel' : '+ New Character'}
+      <button onClick={handleToggleForm}>
+        {toggleButtonLabel}
       </button>
 
       {/* Show character form if toggled */}
@@ -76,10 +91,7 @@ export default function PlayerCard({ player, gameId }) {
         <NewCharacter
           gameId={gameId}
           playerId={player.id}
-          onSuccess={(newChar) => {
-            setShowForm(false);
-            handleCharacterAdded(newChar);
-          }}
+          onSuccess={handleNewCharacterSuccess}
         />
       )}
 

@@ -1,4 +1,3 @@
-
 import { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Formik, Form } from "formik";
@@ -8,6 +7,8 @@ import { SessionContext } from "../contexts/SessionContext";
 import "../styles/pages.css";
 import "../components/CharacterCard.css";
 import "../components/FormField.css";
+import Modal from "../components/Modal";
+import callApi from "../utils/CallApi";
 
 const CharacterSchema = Yup.object({
   name: Yup.string().required("Name is required"),
@@ -47,6 +48,42 @@ function CharacterPage() {
   const char = foundCharacter;
   const parentPlayer = foundPlayer;
 
+  // Edit form initial values
+  const editInitialValues = {
+    name: char?.name || "",
+    character_class: char?.character_class || "",
+    level: char?.level || 1,
+    icon: char?.icon || "",
+    is_active: char?.is_active || false,
+  };
+
+  // Edit form submission handler
+  const handleEditSubmit = async (values, { setSubmitting, setErrors }) => {
+    try {
+      const updated = await callApi(`/characters/${char.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(values),
+      });
+      // Update character in session
+      setSessionData(prev => {
+        const updatedGames = prev.user.games.map(game => ({
+          ...game,
+          players: game.players.map(player => ({
+            ...player,
+            characters: player.characters.map(ch =>
+              ch.id === updated.id ? updated : ch
+            ),
+          })),
+        }));
+        return { ...prev, user: { ...prev.user, games: updatedGames } };
+      });
+      setIsEditing(false);
+    } catch (e) {
+      setErrors({ server: e.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -90,77 +127,35 @@ function CharacterPage() {
     );
   }
 
-  if (isEditing) {
-    return (
-      <div>
-        <h1>Edit Character</h1>
-        <Formik
-          initialValues={{
-            name: char.name,
-            character_class: char.character_class,
-            level: char.level,
-            icon: char.icon || "",
-            is_active: char.is_active,
-          }}
-          validationSchema={CharacterSchema}
-          onSubmit={async (values, { setSubmitting }) => {
-            try {
-              const res = await fetch(`/characters/${char.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify(values),
-              });
-              if (!res.ok) throw new Error("Failed to update character");
-              const updated = await res.json();
-              // Update character in session state
-              const updatedGames = [];
-
-              for (const game of sessionData.user.games) {
-                // For each player in the game, update the character if it matches
-                const updatedPlayers = game.players.map((player) => {
-                  const updatedCharacters = player.characters.map((ch) =>
-                    ch.id === updated.id ? updated : ch
-                  );
-                  return { ...player, characters: updatedCharacters };
-                });
-                updatedGames.push({ ...game, players: updatedPlayers });
-              }
-
-              setSessionData((prev) => ({
-                ...prev,
-                user: {
-                  ...prev.user,
-                  games: updatedGames,
-                },
-              }));
-              setIsEditing(false);
-            } catch (e) {
-              console.error(e);
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-        >
-          {({ isSubmitting }) => (
-            <div className="form-wrapper">
-              <Form>
-                <FormField label="Name" name="name" />
-                <FormField label="Class" name="character_class" />
-                <FormField label="Level" name="level" type="number" />
-                <FormField label="Icon URL" name="icon" />
-                <FormField label="Active" name="is_active" type="checkbox" />
-                <button type="submit" disabled={isSubmitting}>Save</button>
-                <button type="button" onClick={() => setIsEditing(false)} disabled={isSubmitting}>Cancel</button>
-              </Form>
-            </div>
-          )}
-        </Formik>
-      </div>
-    );
-  }
   return (
     <div className="character-page">
+      {isEditing && (
+        <Modal isOpen onClose={() => setIsEditing(false)}>
+          <div style={{ padding: "1rem" }}>
+            <h1>Edit Character</h1>
+            <Formik
+              initialValues={editInitialValues}
+              validationSchema={CharacterSchema}
+              onSubmit={handleEditSubmit}
+            >
+              {({ isSubmitting, errors }) => (
+                <div className="form-wrapper">
+                  <Form>
+                    {errors.server && <div className="error">{errors.server}</div>}
+                    <FormField label="Name" name="name" />
+                    <FormField label="Class" name="character_class" />
+                    <FormField label="Level" name="level" type="number" />
+                    <FormField label="Icon URL" name="icon" />
+                    <FormField label="Active" name="is_active" type="checkbox" />
+                    <button type="submit" disabled={isSubmitting}>Save</button>
+                    <button type="button" onClick={() => setIsEditing(false)} style={{ marginLeft: "0.5rem" }}>Cancel</button>
+                  </Form>
+                </div>
+              )}
+            </Formik>
+          </div>
+        </Modal>
+      )}
       <Link to={`/players/${parentPlayer.id}`}>← Back to Player</Link>
       <div className="character-card">
         <h1>{char.name}</h1>

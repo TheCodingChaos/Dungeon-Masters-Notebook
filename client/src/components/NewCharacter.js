@@ -45,45 +45,56 @@ function NewCharacter({ gameId, playerId, onSuccess, character = null, submitLab
     p => p && typeof p.id === 'number'
   );
 
+  // Initial form values
+  const initialFormValues = {
+    player_id: playerId || character?.player_id || validPlayers[0]?.id || "",
+    name: character?.name || "",
+    character_class: character?.character_class || "",
+    level: character?.level || 1,
+    icon: character?.icon || "",
+    is_active: character?.is_active !== undefined ? character.is_active : true,
+  };
+
+  // Form submission handler
+  const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      const payload = { ...values, game_id: gameId };
+      const newChar = await callApi(
+        `/players/${values.player_id}/characters`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+      if (onSuccess) onSuccess(newChar);
+      resetForm();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Player select options
+  const playerOptions = validPlayers.map((p) => (
+    <option key={p.id} value={p.id}>
+      {p.name}
+    </option>
+  ));
+  const newPlayerOption = <option value="__new">Add New Player...</option>;
+
   return (
     <Formik
-      initialValues={{
-        player_id: playerId || character?.player_id || validPlayers[0]?.id || "",
-        name: character?.name || "",
-        character_class: character?.character_class || "",
-        level: character?.level || 1,
-        icon: character?.icon || "",
-        is_active: character?.is_active !== undefined ? character.is_active : true,
-      }}
+      initialValues={initialFormValues}
       validationSchema={CharacterSchema}
-      onSubmit={async (values, { setSubmitting, resetForm }) => {
-        try {
-          // Post to the Players->Characters endpoint; include game_id in payload
-          const payload = { ...values, game_id: gameId };
-          const newChar = await callApi(
-            `/players/${values.player_id}/characters`,
-            {
-              method: "POST",
-              body: JSON.stringify(payload)
-            }
-          );
-          if (onSuccess) onSuccess(newChar);
-          resetForm();
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+      onSubmit={handleFormSubmit}
     >
       {({ isSubmitting, values, setFieldValue }) => (
         <Form>
           <FormField label="Player" name="player_id" as="select" disabled={!!playerId}>
             <option value="" disabled>Select player</option>
-            {validPlayers.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-            <option value="__new">Add New Player...</option>
+            {playerOptions}
+            {newPlayerOption}
           </FormField>
 
           {values.player_id === "__new" ? (

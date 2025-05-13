@@ -6,25 +6,42 @@ export default function GameCard({ game }) {
   // Destructure game properties
   const { id, title, description, players } = game;
 
+  // Prepare values for JSX
+  const gameLink = "/games/" + id;
+  const hasDescription = Boolean(description);
+  let descriptionNode = null;
+  if (hasDescription) {
+    descriptionNode = (
+      <p>
+        {description}
+      </p>
+    );
+  }
+  const playerCards = players.map(function(player) {
+    return (
+      <PlayerCard
+        key={player.id}
+        player={player}
+        gameId={id}
+      />
+    );
+  });
+
   return (
     <div className="game-card">
       {/* Game title with link to game details */}
       <h3>
-        <Link to={`/games/${id}`}>{title}</Link>
+        <Link to={gameLink}>
+          {title}
+        </Link>
       </h3>
 
       {/* Optional game description */}
-      {description && <p>{description}</p>}
+      {descriptionNode}
 
       {/* List of players in the game */}
       <div className="players-list">
-        {players.map(player => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            gameId={id}
-          />
-        ))}
+        {playerCards}
       </div>
     </div>
   );

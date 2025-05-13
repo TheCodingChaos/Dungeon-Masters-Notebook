@@ -50,36 +50,39 @@ function NavBar() {
     setShowNewPlayer(false);
   };
 
-  // Navigation links for a logged-in user
-  const userNav = (
-    <>
-      <Link to="/dashboard">Dashboard</Link>
-      <Link to="/characters">All Characters</Link>
-      <NavSelect label="Game" options={gameOptions} toPrefix="/games" />
-      <NavSelect label="Player" options={playerOptions} toPrefix="/players" />
-      <button onClick={() => setShowNewPlayer(true)}>+ New Player</button>
-      <span className="nav-divider" />
-      <span className="navbar-welcome">Welcome, {user?.username}</span>
-      <button onClick={handleLogout}>Logout</button>
-    </>
-  );
+  // Handlers for New Player modal
+  const handleShowNewPlayer = () => setShowNewPlayer(true);
+  const handleCloseNewPlayer = () => setShowNewPlayer(false);
 
-  // Navigation links for a guest
-  const guestNav = (
-    <>
-      <Link to="/login">Login</Link>
-      <Link to="/signup">Sign Up</Link>
-    </>
-  );
+  // Navigation item components
+  const dashboardLink = <Link to="/dashboard">Dashboard</Link>;
+  const allCharactersLink = <Link to="/characters">All Characters</Link>;
+  const gameSelect = <NavSelect label="Game" options={gameOptions} toPrefix="/games" />;
+  const playerSelect = <NavSelect label="Player" options={playerOptions} toPrefix="/players" />;
+  const newPlayerButton = <button onClick={handleShowNewPlayer}>+ New Player</button>;
+  const divider = <span className="nav-divider" />;
+  const welcomeMessage = <span className="navbar-welcome">Welcome, {user?.username}</span>;
+  const logoutButton = <button onClick={handleLogout}>Logout</button>;
 
-  // Choose navigation items based on login status
-  const navItems = user ? userNav : guestNav;
+  const userNavItems = [
+    dashboardLink,
+    allCharactersLink,
+    gameSelect,
+    playerSelect,
+    newPlayerButton,
+    divider,
+    welcomeMessage,
+    logoutButton,
+  ];
+  const guestNavItems = [<Link to="/login">Login</Link>, <Link to="/signup">Sign Up</Link>];
+
+  const navItems = user ? userNavItems : guestNavItems;
 
   return (
     <>
       <nav>{navItems}</nav>
       {showNewPlayer && (
-        <Modal isOpen onClose={() => setShowNewPlayer(false)}>
+        <Modal isOpen onClose={handleCloseNewPlayer}>
           <div className="form-wrapper">
             <h3>New Player</h3>
             <Formik
@@ -106,7 +109,7 @@ function NavBar() {
                   <FormField label="Name" name="name" />
                   <FormField label="Summary" name="summary" as="textarea" />
                   <button type="submit" disabled={isSubmitting}>Create</button>
-                  <button type="button" onClick={() => setShowNewPlayer(false)}>Cancel</button>
+                  <button type="button" onClick={handleCloseNewPlayer}>Cancel</button>
                 </Form>
               )}
             </Formik>

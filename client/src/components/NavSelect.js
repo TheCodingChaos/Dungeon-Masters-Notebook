@@ -14,6 +14,16 @@ export default function NavSelect({ label, options, toPrefix }) {
   const [selected, setSelected] = useState('');
   const navigate = useNavigate();
 
+  // Default option element
+  const defaultOption = <option value="">{`Select ${label}`}</option>;
+
+  // Generate option elements from props
+  const optionElements = options.map((option) => (
+    <option key={option.value} value={option.value}>
+      {option.label}
+    </option>
+  ));
+
   // Handle when user selects a new option
   const handleChange = (e) => {
     const value = e.target.value;
@@ -28,10 +38,8 @@ export default function NavSelect({ label, options, toPrefix }) {
     <span className="nav-select">
       <label className="nav-select-label">{label}</label>
       <select value={selected} onChange={handleChange}>
-        <option value="">Select {label}</option>
-        {options.map(option => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
+        {defaultOption}
+        {optionElements}
       </select>
     </span>
   );

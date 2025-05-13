@@ -25,52 +25,70 @@ export default function NewPlayer({ gameId, onSuccess }) {
   // Local state for chosen game
   const [selectedGameId, setSelectedGameId] = useState(gameId || games[0]?.id || "");
 
+  // Generate options for game select
+  const gameOptions = games.map((g) => (
+    <option key={g.id} value={g.id}>
+      {g.title}
+    </option>
+  ));
+
+  // Initial form values
+  const initialFormValues = {
+    name: "",
+    summary: "",
+    character: {
+      name: "",
+      character_class: "",
+      level: 1,
+      icon: "",
+      is_active: true,
+    },
+  };
+
+  // Handle form submission
+  const handleFormSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
+    try {
+      const gameIdNum = Number(selectedGameId);
+      const response = await callApi(
+        `/games/${gameIdNum}/players?include=character`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name: values.name,
+            summary: values.summary,
+            character: {
+              ...values.character,
+              level: Number(values.character.level),
+            },
+          }),
+        }
+      );
+      resetForm();
+      if (onSuccess) {
+        onSuccess(gameIdNum, response, response.character);
+      }
+    } catch (e) {
+      console.error("API error response:", e);
+      if (e.errors) {
+        setErrors(e.errors);
+      } else {
+        setErrors({ server: e.message });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle game selection change
+  const handleGameChange = (e) => {
+    setSelectedGameId(e.target.value);
+  };
+
   return (
     <Formik
-      initialValues={{
-        name: "",
-        summary: "",
-        character: {
-          name: "",
-          character_class: "",
-          level: 1,
-          icon: "",
-          is_active: true,
-        },
-      }}
+      initialValues={initialFormValues}
       validationSchema={NewPlayerAndCharacterSchema}
-      onSubmit={async (values, { setSubmitting, setErrors, resetForm }) => {
-        try {
-          const gameIdNum = Number(selectedGameId);
-          console.log("Posting to gameId", gameIdNum);
-          const response = await callApi(
-            `/games/${gameIdNum}/players?include=character`,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                name: values.name,
-                summary: values.summary,
-                character: {
-                  ...values.character,
-                  level: Number(values.character.level),
-                },
-              }),
-            }
-          );
-          resetForm();
-          // Notify parent with the correct game ID, new player, and new character
-          onSuccess && onSuccess(Number(selectedGameId), response, response.character);
-        } catch (e) {
-          console.error("API error response:", e);
-          if (e.errors) {
-            setErrors(e.errors);
-          } else {
-            setErrors({ server: e.message });
-          }
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+      onSubmit={handleFormSubmit}
     >
       {({ isSubmitting, errors }) => (
         <Form>
@@ -82,12 +100,10 @@ export default function NewPlayer({ gameId, onSuccess }) {
             Game:&nbsp;
             <select
               value={selectedGameId || ''}
-              onChange={e => setSelectedGameId(e.target.value)}
+              onChange={handleGameChange}
             >
               <option value="" disabled>Select a game</option>
-              {games.map(g => (
-                <option key={g.id} value={g.id}>{g.title}</option>
-              ))}
+              {gameOptions}
             </select>
           </label>
 

@@ -9,69 +9,76 @@ export default function useSessionOptions() {
   const { sessionData } = useContext(SessionContext);
   const user = sessionData.user;
 
-  // --- Build game options ---
-  // Format each game as { value: game.id, label: game.title }
-  const gameOptions = user?.games?.map((game) => ({
-    value: game.id,
-    label: game.title,
-  })) || [];
+  // List of the user's games or empty array
+  const userGames = user && user.games ? user.games : [];
 
-  // --- Build player options ---
-  // Start with any players attached at top level (unattached to games)
-  const allPlayers = user?.players ? [...user.players] : [];
+  // List of the user's top-level players or empty array
+  const userPlayers = user && user.players ? user.players : [];
 
-  // Gather all players from all games
-  if (user?.games) {
-    for (let game of user.games) {
-      if (game.players) {
-        for (let player of game.players) {
-          allPlayers.push(player);
-        }
+  // Combine all players: start with top-level
+  const allPlayers = [];
+  for (let i = 0; i < userPlayers.length; i++) {
+    allPlayers.push(userPlayers[i]);
+  }
+  // Add players from each game
+  for (let j = 0; j < userGames.length; j++) {
+    const game = userGames[j];
+    if (game.players) {
+      for (let k = 0; k < game.players.length; k++) {
+        allPlayers.push(game.players[k]);
       }
     }
   }
 
-  // Create a map to ensure player IDs are unique
-  const uniquePlayersMap = new Map();
-  for (let player of allPlayers) {
-    uniquePlayersMap.set(player.id, player);
+  // Build gameOptions list
+  const gameOptions = [];
+  for (let i = 0; i < userGames.length; i++) {
+    const game = userGames[i];
+    const option = { value: game.id, label: game.title };
+    gameOptions.push(option);
   }
 
-  // Format players as { value: id, label: name }
-  const playerOptions = Array.from(uniquePlayersMap.values()).map((p) => ({
-    value: p.id,
-    label: p.name,
-  }));
+  // Remove duplicate players by ID
+  const uniquePlayersMap = {};
+  for (let i = 0; i < allPlayers.length; i++) {
+    const player = allPlayers[i];
+    uniquePlayersMap[player.id] = player;
+  }
+  // Build playerOptions list
+  const playerOptions = [];
+  for (const id in uniquePlayersMap) {
+    const p = uniquePlayersMap[id];
+    playerOptions.push({ value: p.id, label: p.name });
+  }
 
-  // --- Build character options ---
+  // Gather all characters from all players in all games
   const allCharacters = [];
-
-  // Gather all characters from all players of all games
-  if (user?.games) {
-    for (let game of user.games) {
-      if (game.players) {
-        for (let player of game.players) {
-          if (player.characters) {
-            for (let character of player.characters) {
-              allCharacters.push(character);
-            }
+  for (let i = 0; i < userGames.length; i++) {
+    const game = userGames[i];
+    if (game.players) {
+      for (let j = 0; j < game.players.length; j++) {
+        const player = game.players[j];
+        if (player.characters) {
+          for (let k = 0; k < player.characters.length; k++) {
+            allCharacters.push(player.characters[k]);
           }
         }
       }
     }
   }
 
-  // Create a map to ensure character IDs are unique
-  const uniqueCharactersMap = new Map();
-  for (let character of allCharacters) {
-    uniqueCharactersMap.set(character.id, character);
+  // Remove duplicate characters by ID
+  const uniqueCharactersMap = {};
+  for (let i = 0; i < allCharacters.length; i++) {
+    const character = allCharacters[i];
+    uniqueCharactersMap[character.id] = character;
   }
-
-  // Format characters as { value: id, label: name }
-  const characterOptions = Array.from(uniqueCharactersMap.values()).map((c) => ({
-    value: c.id,
-    label: c.name,
-  }));
+  // Build characterOptions list
+  const characterOptions = [];
+  for (const id in uniqueCharactersMap) {
+    const c = uniqueCharactersMap[id];
+    characterOptions.push({ value: c.id, label: c.name });
+  }
 
   return { gameOptions, playerOptions, characterOptions };
 }

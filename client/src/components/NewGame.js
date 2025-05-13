@@ -14,31 +14,37 @@ const NewGameSchema = Yup.object({
 });
 
 export default function NewGame({ onSuccess }) {
+  // Initial form values
+  const initialFormValues = {
+    title: '',
+    system: '',
+    status: '',
+    description: '',
+    start_date: '',
+    setting: '',
+  };
+
+  // Form submission handler
+  const handleFormSubmit = async (values, { setSubmitting, resetForm, setErrors }) => {
+    try {
+      const newGame = await callApi('/games', {
+        method: 'POST',
+        body: JSON.stringify(values),
+      });
+      resetForm();
+      if (onSuccess) onSuccess(newGame);
+    } catch (err) {
+      setErrors({ server: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Formik
-      initialValues={{
-        title: '',
-        system: '',
-        status: '',
-        description: '',
-        start_date: '',
-        setting: '',
-      }}
+      initialValues={initialFormValues}
       validationSchema={NewGameSchema}
-      onSubmit={async (values, { setSubmitting, resetForm, setErrors }) => {
-        try {
-          const newGame = await callApi('/games', {
-            method: 'POST',
-            body: JSON.stringify(values),
-          });
-          resetForm();
-          if (onSuccess) onSuccess(newGame);
-        } catch (err) {
-          setErrors({ server: err.message });
-        } finally {
-          setSubmitting(false);
-        }
-      }}
+      onSubmit={handleFormSubmit}
     >
       {({ isSubmitting, errors }) => (
         <Form>
