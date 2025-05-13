@@ -17,7 +17,8 @@ export default function useSessionOptions() {
   })) || [];
 
   // --- Build player options ---
-  const allPlayers = [];
+  // Start with any players attached at top level (unattached to games)
+  const allPlayers = user?.players ? [...user.players] : [];
 
   // Gather all players from all games
   if (user?.games) {

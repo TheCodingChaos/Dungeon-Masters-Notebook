@@ -25,17 +25,14 @@ function Login() {
         validationSchema={LoginSchema}
         onSubmit={async (values, { setSubmitting, setErrors }) => {
           try {
-            // Send login request
-            await callApi("/login", {
+            // Send login request and get back the user data
+            const user = await callApi("/login", {
               method: "POST",
               body: JSON.stringify(values),
             });
-
-            // If successful, get user session and navigate to dashboard
-            const sessionUser = await callApi("/check_session");
-            setSessionData(prev => ({ ...prev, user: sessionUser }));
+            // Set session directly and navigate
+            setSessionData(prev => ({ ...prev, user }));
             navigate("/dashboard");
-
           } catch (err) {
             // Set server error to display in form
             setErrors({ server: err.message });

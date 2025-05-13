@@ -83,7 +83,9 @@ class NewGame(Resource):
         return games_schema.dump(games), 200
 
     def post(self):
-        data = request.get_json()
+        data = request.get_json() or {}
+        # Extract nested assignments if provided
+        assignments = data.pop('assignments', [])
         data['user_id'] = session.get('user_id')
         try:
             loaded = game_schema.load(data)
@@ -91,6 +93,45 @@ class NewGame(Resource):
             return {'errors': err.messages}, 400
         new_game = Game(**loaded)
         db.session.add(new_game)
+        # If assignments exist, flush game then handle nested creates
+        if assignments:
+            db.session.flush()
+            db.session.refresh(new_game)
+            for assign in assignments:
+                # existing player case
+                if 'player_id' in assign:
+                    char_info = assign.get('character', {})
+                    char_info['player_id'] = assign['player_id']
+                    char_info['game_id'] = new_game.id
+                    try:
+                        loaded_char = character_schema.load(char_info)
+                    except ValidationError as err:
+                        db.session.rollback()
+                        return {'errors': err.messages}, 400
+                    db.session.add(Character(**loaded_char))
+                # new player + character case
+                elif 'player' in assign:
+                    player_info = assign['player'] or {}
+                    try:
+                        loaded_player = player_schema.load(player_info)
+                    except ValidationError as err:
+                        db.session.rollback()
+                        return {'errors': err.messages}, 400
+                    new_player = Player(**loaded_player)
+                    db.session.add(new_player)
+                    db.session.flush()
+                    db.session.refresh(new_player)
+                    char_info = assign.get('character', {})
+                    char_info['player_id'] = new_player.id
+                    char_info['game_id'] = new_game.id
+                    try:
+                        loaded_char = character_schema.load(char_info)
+                    except ValidationError as err:
+                        db.session.rollback()
+                        return {'errors': err.messages}, 400
+                    db.session.add(Character(**loaded_char))
+                # otherwise skip
+        # finalize transaction
         db.session.commit()
         return game_schema.dump(new_game), 201
 
@@ -125,6 +166,30 @@ class NewPlayer(Resource):
         if game.user_id != session.get('user_id'):
             return {'error': '401 unauthorized'}, 401
         data = request.get_json()
+        try:
+            loaded = player_schema.load(data)
+        except ValidationError as err:
+            return {'errors': err.messages}, 400
+        new_player = Player(**loaded)
+        db.session.add(new_player)
+        db.session.commit()
+        return player_schema.dump(new_player), 201
+
+class NewPlayer(Resource):
+    """
+    Resource for creating and listing players independently of games.
+    POST /players  -> create a new unattached player.
+    GET /players   -> list all players for the current user.
+    """
+    def get(self):
+        # Optionally implement listing if desired
+        user_id = session.get('user_id')
+        players = db.session.query(Player).filter_by(user_id=user_id).all()
+        return PlayerSchema.dump(players), 200
+
+    def post(self):
+        # Create a new Player alone (no game assignment)
+        data = request.get_json() or {}
         try:
             loaded = player_schema.load(data)
         except ValidationError as err:
@@ -289,73 +354,6 @@ class NewPlayerAndCharacter(Resource):
         if new_char:
             result['character'] = character_schema.dump(new_char)
         return result, 201
-    
-class NewGameWithAssignments(Resource):
-    def post(self):
-        data = request.get_json() or {}
-        # Pull off the list of player/character assignments
-        assignments = data.pop('assignments', [])
-        # Make sure it’s owned by the current user
-        data['user_id'] = session.get('user_id')
-
-        # 1) Validate and create the Game
-        try:
-            game_data = game_schema.load(data)
-        except ValidationError as err:
-            return {'errors': err.messages}, 400
-        new_game = Game(**game_data)
-        db.session.add(new_game)
-        db.session.flush()
-        db.session.refresh(new_game)
-
-        # 2) Loop through each assignment
-        for assign in assignments:
-            # Existing player case
-            if 'player_id' in assign:
-                char_info = assign.get('character', {})
-                char_info['player_id'] = assign['player_id']
-                char_info['game_id'] = new_game.id
-                try:
-                    loaded_char = character_schema.load(char_info)
-                except ValidationError as err:
-                    db.session.rollback()
-                    return {'errors': err.messages}, 400
-                new_char = Character(**loaded_char)
-                db.session.add(new_char)
-
-            # New player + character case
-            elif 'player' in assign:
-                player_info = assign['player'] or {}
-                try:
-                    loaded_player = player_schema.load(player_info)
-                except ValidationError as err:
-                    db.session.rollback()
-                    return {'errors': err.messages}, 400
-                new_player = Player(**loaded_player)
-                db.session.add(new_player)
-                db.session.flush()
-                db.session.refresh(new_player)
-
-                char_info = assign.get('character', {})
-                char_info['player_id'] = new_player.id
-                char_info['game_id'] = new_game.id
-                try:
-                    loaded_char = character_schema.load(char_info)
-                except ValidationError as err:
-                    db.session.rollback()
-                    return {'errors': err.messages}, 400
-                new_char = Character(**loaded_char)
-                db.session.add(new_char)
-
-            else:
-                # skip any entries without player or player_id
-                continue
-
-        # 3) Commit everything together
-        db.session.commit()
-
-        # 4) Return the newly created game with its nested relationships
-        return game_schema.dump(new_game), 201
 
 
 # Register RESTful resources
@@ -365,13 +363,14 @@ api.add_resource(CheckSession, '/check_session')
 api.add_resource(Logout, '/logout')
 api.add_resource(NewGame, '/games')
 api.add_resource(EditGame, '/games/<int:game_id>')
+api.add_resource(NewPlayer, '/players')
 api.add_resource(EditPlayer, '/players/<int:player_id>')
 api.add_resource(NewSession, '/games/<int:game_id>/sessions')
 api.add_resource(EditSession, '/sessions/<int:session_id>')
 api.add_resource(NewCharacter, '/players/<int:player_id>/characters')
 api.add_resource(EditCharacter, '/characters/<int:character_id>')
 api.add_resource(NewPlayerAndCharacter, '/games/<int:game_id>/players')
-api.add_resource(NewGameWithAssignments, '/games/new')
+# Removed RPC-style assignments endpoint; use POST /games instead
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

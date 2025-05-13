@@ -24,10 +24,15 @@ function PlayerPage() {
 
   // Find the player across all games
   const games = sessionData.user?.games || [];
-  const player = games
+  // Try to find the player in game rosters
+  let player = games
     .flatMap(g => g.players || [])
     .find(p => p.id === parseInt(playerId, 10));
-  // Offer all games for character assignment
+  // If not found in games, check the top-level unattached players
+  if (!player) {
+    player = sessionData.user?.players?.find(p => p.id === parseInt(playerId, 10));
+  }
+  // Offer all games for character assignment (to attach new characters)
   const gamesWithPlayer = games;
   // Modal open state and selected game for new character
   const [showModal, setShowModal] = useState(false);

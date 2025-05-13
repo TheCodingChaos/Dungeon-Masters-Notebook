@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import './Modal.css'
 
 /**
@@ -11,7 +12,8 @@ import './Modal.css'
 export default function Modal({ isOpen, onClose, children }) {
   if (!isOpen) return null;
 
-  return (
+  // Build the modal markup
+  const modalTree = (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <button
@@ -25,4 +27,6 @@ export default function Modal({ isOpen, onClose, children }) {
       </div>
     </div>
   );
+  // Return portal so modal renders at top-level
+  return ReactDOM.createPortal(modalTree, document.body);
 }

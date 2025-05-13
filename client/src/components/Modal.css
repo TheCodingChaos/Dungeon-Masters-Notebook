@@ -3,17 +3,20 @@
   top: 0; left: 0;
   width: 100vw; height: 100vh;
   background: rgba(0,0,0,0.5);
+  display: flex;                /* center the modal-content */
+  align-items: center;          /* vertical centering */
+  justify-content: center;      /* horizontal centering */
   z-index: 99999;  /* bump this way up */
 }
 
 .modal-content {
   position: relative;
-  z-index: 100000; /* above the overlay itself */
-  background: white;         /* white panel behind content */
-  padding: 1rem;            /* some inner spacing */
-  border-radius: 4px;       /* rounded corners */
+  background: white;
+  padding: 1rem;
+  border-radius: 4px;
   max-width: 90vw;          /* fit within viewport */
-  margin: 5% auto;          /* center horizontally, some vertical offset */
+  max-height: 90vh;         /* limit vertical growth */
+  /* margin removed; centering handled by overlay flex */
   overflow: auto;           /* scroll if content too tall */
 }
 
@@ -25,4 +28,13 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
+}
+
+.modal-edit-container {
+  padding: 1rem;
+  max-width: 800px;            /* Wider modal for two‑column layout */
+  margin: auto;                /* Center horizontally */
+  display: grid;               
+  grid-template-columns: 1fr 1fr;  /* Two equal columns */
+  gap: 1rem;                   /* Space between columns */
 }

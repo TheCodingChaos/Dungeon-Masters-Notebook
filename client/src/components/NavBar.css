@@ -1,5 +1,3 @@
-
-
 nav {
   display: flex;
   align-items: center;
@@ -48,4 +46,13 @@ nav select {
   border: 1px solid #a37e4e;
   border-radius: 4px;
   padding: 0.3rem;
+}
+
+/* Vertical divider between nav elements */
+.nav-divider {
+  display: inline-block;
+  border-left: 1px solid rgba(63, 47, 30, 0.5);
+  height: 2.5rem;
+  margin: 0 0.5rem;
+  flex-shrink: 0;
 }

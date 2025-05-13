@@ -39,12 +39,18 @@ export default function NewGameWithAssignments(props) {
     const sessionData = context.sessionData;
 
     let allPlayers = [];
+    // Include any top-level players (unattached)
+    if (sessionData.user && sessionData.user.players) {
+        for (let p of sessionData.user.players) {
+            allPlayers.push(p);
+        }
+    }
+    // Include players from each game
     if (sessionData.user && sessionData.user.games) {
-        for (var i = 0; i < sessionData.user.games.length; i++) {
-            var game = sessionData.user.games[i];
-            if (game.players) {
-                for (var j = 0; j < game.players.length; j++) {
-                    allPlayers.push(game.players[j]);
+        for (let g of sessionData.user.games) {
+            if (g.players) {
+                for (let p of g.players) {
+                    allPlayers.push(p);
                 }
             }
         }
@@ -103,7 +109,7 @@ export default function NewGameWithAssignments(props) {
                     );
                     const payload = { ...values, assignments: filtered };
 
-                    var newGame = await callApi('/games/new', {
+                    var newGame = await callApi('/games', {
                         method: 'POST',
                         body: JSON.stringify(payload),
                     });

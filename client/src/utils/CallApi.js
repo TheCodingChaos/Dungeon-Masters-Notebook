@@ -7,10 +7,14 @@
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 
 export async function callApi(path, options = {}) {
+  const { headers: customHeaders = {}, ...otherOptions } = options;
   const response = await fetch(`${BASE_URL}${path}`, {
+    ...otherOptions,
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...customHeaders,
+    },
   });
   // If no content (204), return null instead of parsing JSON
   if (response.status === 204) {

@@ -14,21 +14,25 @@ import AuthPage from "../pages/AuthPage";
 import AllCharactersPage from "../pages/AllCharactersPage";
 
 function AppRoutes() {
-  const { sessionData } = useContext(SessionContext);
-  const user = sessionData.user;
+  const { isAuthenticated, isSessionChecked } = useContext(SessionContext);
+
+  if (!isSessionChecked) {
+    return <p>Loading...</p>;
+  }
+
   return (
     <Routes>
       <Route
         path="/"
-        element={user ? <Navigate to="/dashboard" /> : <AuthPage />}
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <AuthPage />}
       />
       <Route
         path="/login"
-        element={user ? <Navigate to="/dashboard" /> : <Login />}
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />}
       />
       <Route
         path="/signup"
-        element={user ? <Navigate to="/dashboard" /> : <Signup />}
+        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Signup />}
       />
       <Route
         path="/dashboard"
@@ -81,7 +85,7 @@ function AppRoutes() {
       <Route
         path="*"
         element={
-          user ? <Navigate to="/dashboard" /> : <AuthPage />
+          isAuthenticated ? <Navigate to="/dashboard" /> : <AuthPage />
         }
       />
     </Routes>

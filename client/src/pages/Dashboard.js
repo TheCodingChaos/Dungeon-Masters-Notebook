@@ -116,11 +116,11 @@ export default function Dashboard() {
       {/* Form section for creating games and players */}
       <div className="dashboard-form-section">
         <div className="form-wrapper">
-          <h3>New Game & Initial Character</h3>
+          <h3>New Game</h3>
           <NewGameWithAssignments onSuccess={handleGameCreated} />
         </div>
         <div className="form-wrapper">
-          <h3>New Player</h3>
+          <h3>New Player & Initial Character</h3>
           <NewPlayer
             gameId={games[0]?.id || null}
             onSuccess={function (gameId, newPlayer, newChar) {
