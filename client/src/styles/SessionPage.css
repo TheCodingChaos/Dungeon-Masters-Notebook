@@ -1,0 +1,83 @@
+/* Overall card styling */
+.session-card {
+  background-color: rgba(96, 76, 32, 0.825); /* rich medieval parchment tone */
+  color: #f0e8d0; /* Light parchment text color for base */
+  border-radius: 6px; /* Rounded corners from parchment theme */
+  padding: 16px; /* 1rem converted to px for consistency, adjust as needed */
+  margin-bottom: 24px; /* 1.5rem converted to px, adjust as needed */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); /* Shadow from parchment theme */
+  backdrop-filter: blur(1px); /* Backdrop filter from parchment theme */
+  font-family: 'Times New Roman', Times, serif; /* Thematic font suggestion, fallback to serif */
+  /* Removed: border: 1px solid #ddd; as the parchment theme has a strong background */
+}
+
+/* Heading style - Assuming h1 is used as per your JSX */
+.session-card h1 {
+  font-size: 1.8em; /* Retained from structural block, adjust if too large for theme */
+  margin-top: 0;
+  margin-bottom: 8px; /* 0.5rem converted from h4 style in parchment theme */
+  color: #ffe080; /* Golden/highlight color for heading from parchment theme */
+  font-weight: bold; /* Make headings stand out more */
+}
+
+/* Paragraph style for summary */
+.session-card p {
+  font-size: 1em;
+  line-height: 1.6;
+  /* Margins from parchment theme (0.25rem 0 0.75rem 0) applied below */
+  margin-top: 4px;
+  margin-bottom: 12px;
+  color: #d8c8a0; /* Text color for paragraph from parchment theme */
+}
+
+/* Container for action buttons */
+.session-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 15px;
+}
+
+/* General button styling */
+.session-actions button {
+  background-color: #5a4327; /* Button background from parchment theme */
+  color: #fff2d9; /* Button text color from parchment theme */
+  border: none;
+  /* Padding from parchment theme (0.4rem 0.8rem) converted: ~7px 13px */
+  padding: 7px 13px;
+  border-radius: 4px; /* Button border-radius from parchment theme */
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: bold;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  font-family: 'Verdana', sans-serif; /* A slightly more legible sans-serif for buttons */
+}
+
+/* Hover state for general buttons */
+.session-actions button:hover {
+  background-color: #7b5e38; /* Hover background from parchment theme */
+}
+
+/* Active state for general buttons */
+.session-actions button:active {
+  transform: scale(0.98);
+}
+
+.session-actions button:not(.session-delete-button):hover {
+  background-color: #7b5e38; /* Explicitly stating, though inherited */
+}
+
+/* Specific styling for the 'Delete' button */
+.session-delete-button {
+  background-color: #4a3120; /* A darker, more distinct brown for delete, fitting the theme */
+  color: #fff2d9; /* Keeping text color consistent */
+}
+
+.session-delete-button:hover {
+  background-color: #3b271a; /* Darker shade for delete button on hover */
+}
+
+/* The .sessions-list class from your first block is not included here
+   as it doesn't directly style the .session-card or its children
+   based on the JSX provided. If it's a parent container for multiple cards,
+   its styles can be kept separately. */

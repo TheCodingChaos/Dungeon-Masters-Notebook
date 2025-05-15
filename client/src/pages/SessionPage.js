@@ -5,7 +5,9 @@ import FormField from "../components/FormField";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import { SessionContext } from "../contexts/SessionContext";
-import "../styles/pages.css"
+import Modal from "../components/Modal";
+import "../styles/pages.css";
+import "../styles/SessionPage.css";
 
 // Helper to format ISO date strings as "MMM DD, YYYY"
 const formatDate = (dateStr) => {
@@ -52,6 +54,10 @@ function SessionPage() {
     );
   }
 
+  // Precompute values for JSX
+  const formattedDate = formatDate(session.date);
+  const backToGameLink = `/games/${session.game_id}`;
+
   const handleDelete = async () => {
     try {
       await callApi(`/sessions/${session.id}`, { method: 'DELETE' });
@@ -97,66 +103,65 @@ function SessionPage() {
     </Form>
   );
 
-  if (isEditing) {
-    return (
-      <div>
-        <h1>Edit Session</h1>
-        <Formik
-          initialValues={{
-            date: session.date || "",
-            summary: session.summary || "",
-          }}
-          validationSchema={EditSessionSchema}
-          onSubmit={async (values, { setSubmitting, setErrors }) => {
-            try {
-              const payload = {
-                date: values.date || null,
-                summary: values.summary,
-              };
-              const updated = await callApi(`/sessions/${session.id}`, {
-                method: "PATCH",
-                body: JSON.stringify(payload),
-              });
-              setSessionData(prev => {
-                const newGames = prev.user.games.map(g => {
-                  const newSessions = (g.sessions || []).map(s =>
-                    s.id === updated.id ? updated : s
-                  );
-                  return { ...g, sessions: newSessions };
-                });
-                return {
-                  ...prev,
-                  user: {
-                    ...prev.user,
-                    games: newGames
-                  }
-                };
-              });
-              setIsEditing(false);
-            } catch (e) {
-              setErrors({ server: e.message });
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-          enableReinitialize
-        >
-          {renderEditSessionForm}
-        </Formik>
-      </div>
-    );
-  }
-
   return (
     <div className="session-page">
-      <Link to={`/games/${session.game_id}`}>← Back to Game</Link>
-      <h1>Session on {formatDate(session.date)}</h1>
-      {session.summary && <p>{session.summary}</p>}
-      <div className="session-actions">
-        <button onClick={() => setIsEditing(true)}>Edit</button>
-        <button onClick={handleDelete} className="session-delete-button">
-          Delete
-        </button>
+      <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+        <div className="modal-edit-session" style={{ padding: '1rem' }}>
+          <h1>Edit Session</h1>
+          <Formik
+            initialValues={{
+              date: session.date || "",
+              summary: session.summary || "",
+            }}
+            validationSchema={EditSessionSchema}
+            onSubmit={async (values, { setSubmitting, setErrors }) => {
+              try {
+                const payload = {
+                  date: values.date || null,
+                  summary: values.summary,
+                };
+                const updated = await callApi(`/sessions/${session.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(payload),
+                });
+                setSessionData(prev => {
+                  const newGames = prev.user.games.map(g => {
+                    const newSessions = (g.sessions || []).map(s =>
+                      s.id === updated.id ? updated : s
+                    );
+                    return { ...g, sessions: newSessions };
+                  });
+                  return {
+                    ...prev,
+                    user: {
+                      ...prev.user,
+                      games: newGames
+                    }
+                  };
+                });
+                setIsEditing(false);
+              } catch (e) {
+                setErrors({ server: e.message });
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+            enableReinitialize
+          >
+            {renderEditSessionForm}
+          </Formik>
+        </div>
+      </Modal>
+      <Link className="return-link" to={backToGameLink}>← Back to Game</Link>
+      <div className="session-card">
+        <h1>Session on {formattedDate}</h1>
+        {session.summary && <p>{session.summary}</p>}
+        <div className="session-actions">
+          <button onClick={() => setIsEditing(true)}>Edit</button>
+          <button onClick={handleDelete} className="session-delete-button">
+            Delete
+          </button>
+        </div>
       </div>
     </div>
   );

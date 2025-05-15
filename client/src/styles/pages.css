@@ -57,3 +57,11 @@
   min-height: 100vh;
   padding: 2rem;
 }
+
+.return-link {
+  background-color: #f0e8d0;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}

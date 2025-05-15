@@ -219,7 +219,7 @@ function GamePage() {
   return (
     <>
       <div className="game-page">
-        <Link to="/dashboard">← Back to Dashboard</Link>
+        <Link className="return-link" to="/dashboard">← Back to Dashboard</Link>
         <div className="game-card">
           <h1>{game.title}</h1>
           <p><strong>System:</strong> {game.system}</p>

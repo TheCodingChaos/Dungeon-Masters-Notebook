@@ -163,24 +163,30 @@ function CharacterPage() {
     );
   }
 
+  // Precompute values for JSX
+  const gameTitle =
+    sessionData.user.games.find(g => g.id === char.game_id)?.title ||
+    'Unknown Game';
+  const statusText = char.is_active ? 'Active' : 'Inactive';
+  const imageStyle = { maxWidth: '100px' };
+  const actionsStyle = { marginTop: '1rem' };
+
   return (
     <div className="character-page">
-      {isEditing && (
-        <Modal isOpen onClose={() => setIsEditing(false)}>
-          <div style={{ padding: "1rem" }}>
-            <h1>Edit Character</h1>
-            <Formik
-              initialValues={editInitialValues}
-              validationSchema={CharacterValidationSchema}
-              onSubmit={handleEditSubmit}
-              enableReinitialize
-            >
-              {renderEditCharacterForm}
-            </Formik>
-          </div>
-        </Modal>
-      )}
-      <Link to={`/players/${parentPlayer.id}`}>← Back to Player</Link>
+      <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+        <div style={{ padding: "1rem" }}>
+          <h1>Edit Character</h1>
+          <Formik
+            initialValues={editInitialValues}
+            validationSchema={CharacterValidationSchema}
+            onSubmit={handleEditSubmit}
+            enableReinitialize
+          >
+            {renderEditCharacterForm}
+          </Formik>
+        </div>
+      </Modal>
+      <Link className="return-link" to={`/players/${parentPlayer.id}`}>← Back to Player</Link>
       <div className="character-card">
         <h1>{char.name}</h1>
         <p><strong>Class:</strong> {char.character_class}</p>
@@ -189,18 +195,18 @@ function CharacterPage() {
           <img
             src={char.icon}
             alt={`${char.name} icon`}
-            style={{ maxWidth: "100px" }}
+            style={imageStyle}
           />
         )}
-        <p><strong>Status:</strong> {char.is_active ? "Active" : "Inactive"}</p>
+        <p><strong>Status:</strong> {statusText}</p>
         <p><strong>Created by:</strong> <Link to={`/players/${parentPlayer.id}`}>{parentPlayer.name}</Link></p>
         <div>
           <h3>Game</h3>
           <Link to={`/games/${char.game_id}`}>
-            {sessionData.user.games.find(g => g.id === char.game_id)?.title || 'Unknown Game'}
+            {gameTitle}
           </Link>
         </div>
-        <div style={{ marginTop: "1rem" }}>
+        <div style={actionsStyle}>
           <button onClick={() => setIsEditing(true)}>Edit</button>
           <button onClick={handleDelete} style={{ marginLeft: "0.5rem" }} disabled={isDeleting}>Delete</button>
         </div>

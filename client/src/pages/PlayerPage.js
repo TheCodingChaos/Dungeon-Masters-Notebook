@@ -238,7 +238,7 @@ function PlayerPage() {
           </div>
         </Modal>
       )}
-      <Link to="/dashboard">← Back to Dashboard</Link>
+      <Link className="return-link" to="/dashboard">← Back to Dashboard</Link>
       <div className="player-card">
         <h1>{player.name}</h1>
         {player.summary && (
@@ -300,7 +300,6 @@ function PlayerPage() {
           />
         </div>
       </Modal>
-      {/* Edit and Delete buttons section */}
       <div className="player-actions">
         <button onClick={() => setIsEditing(true)}>Edit</button>
         <button
