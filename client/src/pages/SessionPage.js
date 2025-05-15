@@ -1,4 +1,5 @@
-import { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect } from 'react';
+import callApi from '../utils/CallApi';
 import { useParams, Link, useNavigate } from "react-router-dom";
 import FormField from "../components/FormField";
 import { Formik, Form } from "formik";
@@ -52,33 +53,49 @@ function SessionPage() {
   }
 
   const handleDelete = async () => {
-    const res = await fetch(`/sessions/${session.id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (res.ok) {
-      // Remove from context using forEach and variable assignment for clarity
-      setSessionData(prev => {
-        const newGames = prev.user.games.map(g => {
-          const newSessions = (g.sessions || []).filter(s => s.id !== session.id);
-          return { ...g, sessions: newSessions };
-        });
-        return {
-          ...prev,
-          user: {
-            ...prev.user,
-            games: newGames
-          }
-        };
-      });
-      navigate(`/games/${session.game_id}`);
+    try {
+      await callApi(`/sessions/${session.id}`, { method: 'DELETE' });
+      setSessionData(prev => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          games: prev.user.games.map(g => ({
+            ...g,
+            sessions: (g.sessions || []).filter(s => s.id !== session.id)
+          }))
+        }
+      }));
+      navigate(`/games/${session.game_id}`, { replace: true });
+    } catch (err) {
+      console.error('Error deleting session:', err);
     }
   };
 
-  const EditSessionSchema = Yup.object({
-    date: Yup.date().required("Date is required"),
-    summary: Yup.string(),
+  const EditSessionSchema = Yup.object().shape({
+    date: Yup.date()
+      .required('Date is required'),
+    summary: Yup.string()
+      .max(2000, 'Summary is too long')
+      .nullable(),
   });
+
+  // --- Edit Session Form render helper ---
+  const renderEditSessionForm = ({ isSubmitting, errors }) => (
+    <Form noValidate className="edit-session-form">
+      <h3>Edit Session</h3>
+      {errors.server && <div className="error-message server-error">{errors.server}</div>}
+      <FormField label="Date" name="date" type="date" />
+      <FormField label="Summary (Optional)" name="summary" as="textarea" placeholder="Key events, notes, or outcomes..." />
+      <div className="form-actions">
+        <button type="submit" disabled={isSubmitting} className="button submit-button">
+          {isSubmitting ? 'Saving...' : 'Save Changes'}
+        </button>
+        <button type="button" onClick={() => setIsEditing(false)} className="button cancel-button" style={{ marginLeft: '0.5rem' }}>
+          Cancel
+        </button>
+      </div>
+    </Form>
+  );
 
   if (isEditing) {
     return (
@@ -96,18 +113,10 @@ function SessionPage() {
                 date: values.date || null,
                 summary: values.summary,
               };
-              const res = await fetch(`/sessions/${session.id}`, {
+              const updated = await callApi(`/sessions/${session.id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify(payload),
               });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || "Failed to update session");
-              }
-              const updated = await res.json();
-              // Update context with clearer logic
               setSessionData(prev => {
                 const newGames = prev.user.games.map(g => {
                   const newSessions = (g.sessions || []).map(s =>
@@ -130,20 +139,9 @@ function SessionPage() {
               setSubmitting(false);
             }
           }}
+          enableReinitialize
         >
-          {({ isSubmitting, errors }) => (
-            <Form>
-              {errors.server && <div>{errors.server}</div>}
-              <FormField label="Date" name="date" type="date" />
-              <FormField label="Summary" name="summary" as="textarea" />
-              <button type="submit" disabled={isSubmitting}>
-                Save
-              </button>
-              <button type="button" onClick={() => setIsEditing(false)}>
-                Cancel
-              </button>
-            </Form>
-          )}
+          {renderEditSessionForm}
         </Formik>
       </div>
     );

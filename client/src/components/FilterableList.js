@@ -1,22 +1,16 @@
 import "./FilterableList.css";
 
-/**
- * A generic list component with filter dropdowns and a list of items.
- *
- * Props:
- *   - filters: Array of filter objects with label, options, value, onChange
- *   - items: Array of data to render
- *   - renderItem: Function to render each item
- */
 function FilterableList({ filters, items, renderItem }) {
-  // Precompute filterElements and itemElements using for-loops
-  const filterElements = [];
-  for (let i = 0; i < filters.length; i++) {
-    const { label, options, value, onChange } = filters[i];
-    filterElements.push(
-      <div key={label} className="filter-control">
-        <label className="filter-label">{label}</label>
-        <select value={value} onChange={onChange}>
+  const filterElements = filters.map((filter, index) => {
+    const { label, options, value, onChange, id: filterId } = filter;
+    const key = filterId || label || `filter-${index}`;
+    const selectId = `filter-select-${key}`;
+
+    return (
+      <div key={key} className="filter-control">
+        {/* Using htmlFor for better accessibility */}
+        <label htmlFor={selectId} className="filter-label">{label}</label>
+        <select id={selectId} value={value} onChange={onChange}>
           <option value="">All</option>
           {options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -24,28 +18,28 @@ function FilterableList({ filters, items, renderItem }) {
         </select>
       </div>
     );
-  }
+  });
 
-  const itemElements = [];
-  for (let idx = 0; idx < items.length; idx++) {
-    const item = items[idx];
-    itemElements.push(
-      <div key={item.id} className="filterable-item">
-        {renderItem(item)}
-      </div>
-    );
-  }
+  const itemElements = items.map(item => (
+    <div key={item.id} className="filterable-item">
+      {renderItem(item)}
+    </div>
+  ));
 
   return (
     <div className="filterable-container">
-      {/* Filter controls section */}
-      <div className="filter-controls">
-        {filterElements}
-      </div>
+      {filters && filters.length > 0 && (
+        <div className="filter-controls">
+          {filterElements}
+        </div>
+      )}
 
-      {/* Filtered results */}
       <div className="filterable-list">
-        {itemElements}
+        {items && items.length > 0 ? (
+          itemElements
+        ) : (
+          <p className="filterable-list-empty">No items to display.</p>
+        )}
       </div>
     </div>
   );

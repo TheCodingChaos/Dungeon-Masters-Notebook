@@ -1,45 +1,51 @@
-import { useState, useContext, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { SessionContext } from "../contexts/SessionContext";
-import Login from "../components/Login";
-import Signup from "../components/Signup";
-import "../styles/pages.css";
+import React, { useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { SessionContext } from '../contexts/SessionContext';
+import Login from '../components/Login';
+import Signup from '../components/Signup';
+import '../styles/pages.css';
 
-function AuthPage() {
-  // Access user session data
+export default function AuthPage() {
   const { sessionData } = useContext(SessionContext);
-  const user = sessionData.user;
-
-  // Used to redirect if the user is already logged in
+  const user = sessionData?.user;
   const navigate = useNavigate();
 
-  // If the user is already logged in, redirect to dashboard
+  // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate("/dashboard");
+      navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 
-  // Tracks whether the login or signup form is displayed
-  const [isLogin, setIsLogin] = useState(true);
+  const [isDisplayingLogin, setIsDisplayingLogin] = useState(true);
 
-  // Switch between login and signup form
-  const handleToggleForm = () => {
-    setIsLogin(!isLogin);
+  const handleToggleAuthForm = () => {
+    setIsDisplayingLogin(prev => !prev);
   };
+
+  const toggleButtonText = isDisplayingLogin
+    ? 'Need an account? Sign Up'
+    : 'Already have an account? Login';
+
+  const FormComponentToRender = isDisplayingLogin ? <Login /> : <Signup />;
+
+  // Prevent rendering when user is authenticated
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="auth-page">
-      {/* Toggle button to switch between login and signup */}
-      
-      <button onClick={handleToggleForm}>
-        {isLogin ? "Switch to Sign Up" : "Switch to Login"}
-      </button>
-
-      {/* Render the appropriate form */}
-      {isLogin ? <Login /> : <Signup />}
+      <div className="auth-form-container">
+        {FormComponentToRender}
+        <button
+          type="button"
+          onClick={handleToggleAuthForm}
+          className="button-link toggle-auth-form-button"
+        >
+          {toggleButtonText}
+        </button>
+      </div>
     </div>
   );
 }
-
-export default AuthPage;

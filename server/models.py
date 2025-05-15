@@ -2,7 +2,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
 from sqlalchemy import event
-import secrets
+# import secrets
 
 # Ensure necessary imports
 from config import db, bcrypt

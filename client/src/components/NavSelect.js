@@ -1,18 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-/**
- * NavSelect: renders a labeled <select> for navigation.
- *
- * Props:
- *   - label: string (display label for the dropdown)
- *   - options: Array<{ value: any, label: string }>
- *   - toPrefix: string (path prefix to navigate to, e.g. '/games')
- */
 export default function NavSelect({ label, options, toPrefix }) {
   // State for the current selection
   const [selected, setSelected] = useState('');
   const navigate = useNavigate();
+  // Generate a unique id for the select
+  const selectId = `nav-select-${label.toLowerCase().replace(/\s+/g, '-')}`;
 
   // Default option element
   const defaultOption = <option value="">{`Select ${label}`}</option>;
@@ -36,8 +30,13 @@ export default function NavSelect({ label, options, toPrefix }) {
   // Render labeled select dropdown for navigation
   return (
     <span className="nav-select">
-      <label className="nav-select-label">{label}</label>
-      <select value={selected} onChange={handleChange}>
+      <label htmlFor={selectId} className="nav-select-label">{label}</label>
+      <select
+        id={selectId}
+        className="nav-select-dropdown"
+        value={selected}
+        onChange={handleChange}
+      >
         {defaultOption}
         {optionElements}
       </select>

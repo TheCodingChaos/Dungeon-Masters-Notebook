@@ -1,3 +1,4 @@
+import React from 'react';
 import { useContext, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Modal from "../components/Modal";
@@ -28,13 +29,13 @@ function GamePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showSessionForm, setShowSessionForm] = useState(false);
   const navigate = useNavigate();
-  const EditGameSchema = Yup.object({
-    title: Yup.string().required("Required"),
-    system: Yup.string().required("Required"),
-    status: Yup.string().required("Required"),
-    description: Yup.string(),
-    start_date: Yup.date().nullable(),
-    setting: Yup.string(),
+  const EditGameSchema = Yup.object().shape({
+    title: Yup.string().min(2, 'Title is too short').required('Title is required'),
+    system: Yup.string().min(2, 'System is too short').required('System is required'),
+    status: Yup.string().required('Status is required'),
+    description: Yup.string().max(1000, 'Description is too long').nullable(),
+    start_date: Yup.date().nullable().transform(v => (v instanceof Date && !isNaN(v) ? v : null)),
+    setting: Yup.string().max(200, 'Setting is too long').nullable(),
   });
   const game = sessionData.user?.games?.find(
     (g) => g.id === parseInt(gameId, 10)
@@ -78,142 +79,142 @@ function GamePage() {
       </div>
     );
   }
-  
-  const playerCards = (game.players || []).map(player => (
-    <PlayerCard
-      key={player.id}
-      player={player}
-      gameId={game.id}
-      onCharacterAdded={(gameId, newChar) => {
-        setSessionData(prev => ({
-          ...prev,
-          user: {
-            ...prev.user,
-            games: prev.user.games.map(g =>
-              g.id === gameId
-                ? {
-                  ...g,
-                  players: g.players.map(p =>
-                    p.id === newChar.player_id
-                      ? { ...p, characters: [...(p.characters || []), newChar] }
-                      : p
-                  ),
-                }
-                : g
-            ),
-          },
-        }));
-      }}
-    />
-  ));
 
-  // Sessions list and form toggle logic
-  const sessionsList = Array.isArray(game.sessions)
-    ? game.sessions.filter(s => s != null)
-    : [];
-  const sessionItems = sessionsList.length > 0
-    ? sessionsList.map(sess => {
-      const displaySummary = sess.summary && sess.summary.length > 30
-        ? sess.summary.slice(0, 30) + '...'
-        : sess.summary || "";
-      return (
-        <li key={sess.id}>
-          <Link to={`/sessions/${sess.id}`}>
-            {formatDate(sess.date)}{displaySummary ? `: ${displaySummary}` : ""}
-          </Link>
-        </li>
-      );
-    })
-    : [<li key="no-sessions">No sessions yet</li>];
-
-  const sessionsListUI = sessionItems;
-
-  // Session form element
-  const sessionFormWrapper = showSessionForm ? (
-    <div style={sessionContainerStyle}>
-      <NewSession gameId={game.id} onSuccess={() => setShowSessionForm(false)} />
-    </div>
-  ) : null;
-
-  // Toggle button label
-  const sessionToggleLabel = showSessionForm ? "Cancel" : "+ New Session";
-
-  // Players list section
-  const playersListSection = (
-    <div style={sectionSpacing}>
-      <div className="players-list">{playerCards}</div>
-    </div>
-  );
-
-  // Sessions list section
-  const sessionsSection = (
-    <div className="character-card" style={sectionSpacing}>
-      <h3>Sessions</h3>
-      <button onClick={handleToggleSessionForm}>
-        {sessionToggleLabel}
-      </button>
-      {sessionFormWrapper}
-      <ul>{sessionsListUI}</ul>
-    </div>
-  );
-
-  // Edit modal element
-  const editModal = showEditModal ? (
-    <Modal isOpen onClose={handleCloseEditModal}>
-      <div className="modal-edit-container">
-        <h1>Edit Game</h1>
-        <Formik
-          initialValues={{
-            title: game.title || "",
-            system: game.system || "",
-            status: game.status || "",
-            description: game.description || "",
-            start_date: game.start_date || "",
-            setting: game.setting || "",
-          }}
-          validationSchema={EditGameSchema}
-          onSubmit={async (values, { setSubmitting, setErrors }) => {
-            try {
-              const payload = { ...values, start_date: values.start_date || null };
-              const updated = await callApi(`/games/${gameId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-              });
+  // --- Render helpers ---
+  const renderPlayerCards = () => (
+    <div style={sectionSpacing} className="players-list">
+      {(game.players || []).length > 0 ? (
+        (game.players || []).map(player => (
+          <PlayerCard
+            key={player.id}
+            player={player}
+            gameId={game.id}
+            onCharacterAdded={(gameId, newChar) => {
               setSessionData(prev => ({
                 ...prev,
                 user: {
                   ...prev.user,
-                  games: prev.user.games.map(g => (g.id === updated.id ? updated : g)),
+                  games: prev.user.games.map(g =>
+                    g.id === gameId
+                      ? {
+                          ...g,
+                          players: g.players.map(p =>
+                            p.id === newChar.player_id
+                              ? { ...p, characters: [...(p.characters || []), newChar] }
+                              : p
+                          ),
+                        }
+                      : g
+                  ),
                 },
               }));
-              handleCloseEditModal();
-            } catch (e) {
-              setErrors({ server: e.message });
-            } finally {
-              setSubmitting(false);
-            }
-          }}
-        >
-          {({ isSubmitting, errors }) => (
-            <Form>
-              {errors.server && <div className="error">{errors.server}</div>}
-              <FormField label="Title" name="title" />
-              <FormField label="System" name="system" />
-              <FormField label="Status" name="status" />
-              <FormField label="Description" name="description" as="textarea" />
-              <FormField label="Start Date" name="start_date" type="date" />
-              <FormField label="Setting" name="setting" />
-              <div style={actionsContainerStyle}>
-                <button type="submit" disabled={isSubmitting}>Save</button>
-                <button type="button" onClick={handleCloseEditModal}>Cancel</button>
-              </div>
-            </Form>
-          )}
-        </Formik>
-      </div>
-    </Modal>
-  ) : null;
+            }}
+          />
+        ))
+      ) : (
+        <p>No players added yet.</p>
+      )}
+    </div>
+  );
+
+  const sessionsList = Array.isArray(game.sessions)
+    ? game.sessions.filter(s => s != null)
+    : [];
+
+  const renderSessionsSection = () => (
+    <div className="character-card" style={sectionSpacing}>
+      <h3>Sessions</h3>
+      <button onClick={handleToggleSessionForm} className="button toggle-session-form">
+        {showSessionForm ? 'Cancel' : '+ New Session'}
+      </button>
+      {showSessionForm && (
+        <div style={sessionContainerStyle}>
+          <NewSession gameId={game.id} onSuccess={() => setShowSessionForm(false)} />
+        </div>
+      )}
+      <ul>
+        {sessionsList.length > 0
+          ? sessionsList.map(sess => {
+              const displaySummary =
+                sess.summary && sess.summary.length > 30
+                  ? sess.summary.slice(0, 30) + '...'
+                  : sess.summary || '';
+              return (
+                <li key={sess.id}>
+                  <Link to={`/sessions/${sess.id}`}>
+                    {formatDate(sess.date)}
+                    {displaySummary ? `: ${displaySummary}` : ''}
+                  </Link>
+                </li>
+              );
+            })
+          : <li>No sessions yet</li>}
+      </ul>
+    </div>
+  );
+
+  const renderEditModal = () => (
+    showEditModal && (
+      <Modal isOpen onClose={handleCloseEditModal}>
+        <div className="modal-edit-container">
+          <h3>Edit Game</h3>
+          <Formik
+            initialValues={{
+              title: game.title || '',
+              system: game.system || '',
+              status: game.status || '',
+              description: game.description || '',
+              start_date: game.start_date || '',
+              setting: game.setting || '',
+            }}
+            validationSchema={EditGameSchema}
+            onSubmit={async (values, { setSubmitting, setErrors }) => {
+              try {
+                const payload = { ...values, start_date: values.start_date || null };
+                const updated = await callApi(`/games/${gameId}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                });
+                setSessionData(prev => ({
+                  ...prev,
+                  user: {
+                    ...prev.user,
+                    games: prev.user.games.map(g => (g.id === updated.id ? updated : g)),
+                  },
+                }));
+                handleCloseEditModal();
+              } catch (e) {
+                setErrors({ server: e.message || 'Failed to update game.' });
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            {({ isSubmitting, errors }) => (
+              <Form noValidate>
+                {errors.server && <div className="error-message server-error">{errors.server}</div>}
+                <FormField label="Title" name="title" />
+                <FormField label="System" name="system" />
+                <FormField label="Status" name="status" />
+                <FormField label="Description" name="description" as="textarea" />
+                <FormField label="Start Date" name="start_date" type="date" />
+                <FormField label="Setting" name="setting" />
+                <div style={actionsContainerStyle}>
+                  <button type="submit" disabled={isSubmitting} className="button submit-button">
+                    {isSubmitting ? 'Saving...' : 'Save'}
+                  </button>
+                  <button type="button" onClick={handleCloseEditModal} className="button cancel-button" style={{ marginLeft: '0.5rem' }}>
+                    Cancel
+                  </button>
+                </div>
+              </Form>
+            )}
+          </Formik>
+        </div>
+      </Modal>
+    )
+  );
 
   return (
     <>
@@ -229,10 +230,10 @@ function GamePage() {
           <button onClick={handleOpenEditModal}>Edit Game</button>
           <button onClick={handleDelete}>Delete Game</button>
         </div>
-        {playersListSection}
-        {sessionsSection}
+        {renderPlayerCards()}
+        {renderSessionsSection()}
       </div>
-      {editModal}
+      {renderEditModal()}
     </>
   );
 }

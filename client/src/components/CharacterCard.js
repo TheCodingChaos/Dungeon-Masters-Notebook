@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react'; // Added useEffect
+import { useState, useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from './Modal';
 import callApi from '../utils/CallApi';
@@ -6,12 +6,11 @@ import { SessionContext } from '../contexts/SessionContext';
 import "./CharacterCard.css";
 
 export default function CharacterCard({ character }) {
-  // Destructure character properties - good practice
   const {
     id,
     name,
     icon,
-    character_class: characterClass, // Renaming is good
+    character_class: characterClass,
     level,
     is_active: isActive,
   } = character;
@@ -20,18 +19,14 @@ export default function CharacterCard({ character }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Edit form state
-  // An experienced junior might group related form state
   const [editForm, setEditForm] = useState({
     name: name,
     characterClass: characterClass,
     level: level,
-    icon: icon || '', // Ensure icon has a default for input
+    icon: icon || '',
     isActive: isActive,
   });
 
-  // Effect to reset form state if the character prop changes or when modal opens
-  // This shows more attention to form lifecycle
   useEffect(() => {
     if (showEditModal) {
       setEditForm({
@@ -42,7 +37,7 @@ export default function CharacterCard({ character }) {
         isActive: isActive,
       });
     }
-  }, [showEditModal, name, characterClass, level, icon, isActive, character]); // character added to deps for completeness
+  }, [showEditModal, name, characterClass, level, icon, isActive, character]);
 
   const handleFormChange = (e) => {
     const { name: inputName, value, type, checked } = e.target;
@@ -52,7 +47,6 @@ export default function CharacterCard({ character }) {
     }));
   };
 
-  // Handler for saving edits
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -70,7 +64,6 @@ export default function CharacterCard({ character }) {
         }
       );
 
-      // Assuming callApi throws for network errors, but might return error structure for validation
       if (updatedCharacter && updatedCharacter.error) {
         console.error("Failed to update character:", updatedCharacter.error);
         alert(`Error: ${updatedCharacter.error.message || 'Could not update character.'}`);
@@ -78,7 +71,6 @@ export default function CharacterCard({ character }) {
       }
 
       setShowEditModal(false);
-      // Using .map() for cleaner immutable updates
       setSessionData(prev => ({
         ...prev,
         user: {
@@ -100,11 +92,10 @@ export default function CharacterCard({ character }) {
     }
   };
 
-  // Handler for confirming delete
   const handleDeleteConfirm = async () => {
     try {
       await callApi(`/characters/${id}`, { method: 'DELETE' });
-      // No error means success
+
       setShowDeleteModal(false);
       setSessionData(prev => ({
         ...prev,
@@ -122,8 +113,7 @@ export default function CharacterCard({ character }) {
     } catch (error) {
       console.error("API call failed during delete:", error);
       alert("An error occurred while deleting the character. Please try again.");
-      // Optionally keep modal open or close it depending on desired UX for errors
-      // setShowDeleteModal(false);
+
     }
   };
 

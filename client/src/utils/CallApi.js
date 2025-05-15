@@ -9,33 +9,56 @@ const BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 const API_PREFIX = "/api";
 
 export async function callApi(path, options = {}) {
-  // Ensure API routes are prefixed correctly, avoiding double slashes
-  let url = path;
-  if (!path.startsWith("http") && !path.startsWith(API_PREFIX)) {
-    url = `${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+  // Build full URL, prefixing with API_PREFIX if needed
+  let apiUrl = path;
+  if (!path.startsWith('http') && !path.startsWith(API_PREFIX)) {
+    const pathSegment = path.startsWith('/') ? path : `/${path}`;
+    apiUrl = `${API_PREFIX}${pathSegment}`;
   }
+  const fullUrl = `${BASE_URL}${apiUrl}`;
+
+  // Destructure custom headers and other fetch options
   const { headers: customHeaders = {}, ...otherOptions } = options;
-  const response = await fetch(`${BASE_URL}${url}`, {
+  const fetchOptions = {
     ...otherOptions,
-    credentials: "include",
+    credentials: 'include',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...customHeaders,
     },
-  });
-  // If no content (204), return null instead of parsing JSON
+  };
+
+  const response = await fetch(fullUrl, fetchOptions);
+
+  // Handle 204 No Content
   if (response.status === 204) {
     if (!response.ok) {
-      // Even for 204, if not OK, throw error without JSON body
       throw new Error(`API error: ${response.status}`);
     }
     return null;
   }
-  const data = await response.json();
-  if (!response.ok) {
-    // If the server returned an error object, propagate that message
-    throw new Error(data.error || "Unknown API error");
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    if (!response.ok) {
+      // Non-OK without JSON body
+      throw new Error(response.statusText || `Request failed with status ${response.status}`);
+    }
+    console.error('Failed to parse JSON response:', e);
+    throw new Error('Failed to parse server response.');
   }
+
+  if (!response.ok) {
+    // Use server-provided error message if available
+    const errorMessage = data.error || data.message || `API request failed with status ${response.status}`;
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
   return data;
 }
 

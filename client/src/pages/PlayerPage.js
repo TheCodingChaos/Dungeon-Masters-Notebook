@@ -1,5 +1,5 @@
-import { useContext, useState, useEffect } from "react";
-import callApi from "../utils/CallApi";
+import React, { useContext, useState, useEffect } from 'react';
+import callApi from '../utils/CallApi';
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { SessionContext } from "../contexts/SessionContext";
 import { Formik, Form } from "formik";
@@ -12,9 +12,13 @@ import "../components/FormField.css";
 import Modal from "../components/Modal";
 import NewCharacter from "../components/NewCharacter";
 
-const EditPlayerSchema = Yup.object({
-  name: Yup.string().required("Name is required"),
-  summary: Yup.string(),
+const EditPlayerSchema = Yup.object().shape({
+  name: Yup.string()
+    .min(2, 'Name is too short')
+    .required('Name is required'),
+  summary: Yup.string()
+    .max(1000, 'Summary is too long')
+    .nullable(),
 });
 
 function PlayerPage() {
@@ -85,12 +89,8 @@ function PlayerPage() {
 
   // Delete handler
   const handleDelete = async () => {
-    const res = await fetch(`/api/players/${player.id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (res.ok) {
-      // Remove player from context
+    try {
+      await callApi(`/players/${player.id}`, { method: 'DELETE' });
       setSessionData(prev => ({
         ...prev,
         user: {
@@ -101,7 +101,9 @@ function PlayerPage() {
           }))
         }
       }));
-      navigate("/dashboard");
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      console.error('Error deleting player:', err);
     }
   };
 
@@ -197,34 +199,41 @@ function PlayerPage() {
     characterListItems = [<li key="no-characters">No characters yet</li>];
   }
 
+  // --- Edit Player Form render helper ---
+  const renderEditPlayerForm = ({ isSubmitting, errors }) => (
+    <Form noValidate className="edit-player-form">
+      <h3>Edit Player: {player?.name}</h3>
+      {errors.server && <div className="error-message server-error">{errors.server}</div>}
+      <FormField label="Name" name="name" />
+      <FormField label="Summary (Optional)" name="summary" as="textarea" />
+      <div className="form-actions">
+        <button type="submit" disabled={isSubmitting} className="button submit-button">
+          {isSubmitting ? 'Saving...' : 'Save'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          className="button cancel-button"
+          style={{ marginLeft: '0.5rem' }}
+        >
+          Cancel
+        </button>
+      </div>
+    </Form>
+  );
+
   return (
     <div className="player-page">
       {isEditing && (
         <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
           <div style={{ padding: '1rem' }}>
-            <h1>Edit Player</h1>
             <Formik
               initialValues={editInitialValues}
               validationSchema={EditPlayerSchema}
               onSubmit={handleEditSubmit}
+              enableReinitialize
             >
-              {({ isSubmitting, errors }) => (
-                <div className="form-wrapper">
-                  <Form>
-                    {errors.server && <div className="error">{errors.server}</div>}
-                    <FormField label="Name" name="name" />
-                    <FormField label="Summary" name="summary" as="textarea" />
-                    <button type="submit" disabled={isSubmitting}>Save</button>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      style={{ marginLeft: '0.5rem' }}
-                    >
-                      Cancel
-                    </button>
-                  </Form>
-                </div>
-              )}
+              {renderEditPlayerForm}
             </Formik>
           </div>
         </Modal>

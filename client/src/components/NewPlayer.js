@@ -1,128 +1,225 @@
-import { useContext, useState } from "react";
-import { SessionContext } from "../contexts/SessionContext";
-import { Formik, Form } from "formik";
-import * as Yup from "yup";
-import callApi from "../utils/CallApi";
-import FormField from "./FormField";
+import React, { useContext, useState, useMemo } from 'react';
+import { Formik, Form } from 'formik';
+import * as Yup from 'yup';
 
-// Validation schema matching the NewPlayerAndCharacter endpoint
-const NewPlayerAndCharacterSchema = Yup.object({
-  name: Yup.string().required("Player name is required"),
-  summary: Yup.string(),
-  character: Yup.object({
-    name: Yup.string().required("Character name is required"),
-    character_class: Yup.string().required("Character class is required"),
-    level: Yup.number().min(1).required("Level is required"),
-    icon: Yup.string().url().nullable(),
+import { SessionContext } from '../contexts/SessionContext';
+import callApi from '../utils/CallApi';
+import FormField from './FormField';
+
+import '../styles/pages.css';
+
+const NewPlayerAndCharacterSchema = Yup.object().shape({
+  name: Yup.string()
+    .min(2, 'Player name is too short')
+    .required('Player name is required'),
+  summary: Yup.string().max(500, 'Summary is too long').nullable(),
+  character: Yup.object().shape({
+    name: Yup.string()
+      .min(2, 'Character name is too short')
+      .required('Character name is required'),
+    character_class: Yup.string()
+      .min(2, 'Class is too short')
+      .required('Character class is required'),
+    level: Yup.number()
+      .integer('Level must be a whole number')
+      .min(1, 'Level must be at least 1')
+      .required('Level is required'),
+    icon: Yup.string()
+      .url('Icon URL must be a valid URL')
+      .nullable()
+      .transform(value => (value === '' ? null : value)),
     is_active: Yup.boolean(),
   }).required(),
 });
 
-// Form to add a new player and their starting character using the new endpoint
-export default function NewPlayer({ gameId, onSuccess }) {
+const initialFormValues = {
+  name: '',
+  summary: '',
+  character: {
+    name: '',
+    character_class: '',
+    level: 1,
+    icon: '',
+    is_active: true,
+  },
+};
+
+const gameSelectInputId = 'new-player-game-id-select';
+
+export default function NewPlayer({ gameId: initialGameId, onSuccess }) {
   const { sessionData } = useContext(SessionContext);
-  const games = sessionData.user?.games || [];
-  // Local state for chosen game
-  const [selectedGameId, setSelectedGameId] = useState(gameId || games[0]?.id || "");
+  const gamesFromSession = useMemo(() => sessionData.user?.games || [], [sessionData.user?.games]);
 
-  // Generate options for game select
-  const gameOptions = games.map((g) => (
-    <option key={g.id} value={g.id}>
-      {g.title}
-    </option>
-  ));
+  const [selectedGameId, setSelectedGameId] = useState(
+    () => (initialGameId || (gamesFromSession.length > 0 ? gamesFromSession[0].id : '')).toString()
+  );
 
-  // Initial form values
-  const initialFormValues = {
-    name: "",
-    summary: "",
-    character: {
-      name: "",
-      character_class: "",
-      level: 1,
-      icon: "",
-      is_active: true,
-    },
+  const gameOptionElements = useMemo(() => {
+    return gamesFromSession.map(g => (
+      <option key={g.id} value={g.id.toString()}>
+        {g.title}
+      </option>
+    ));
+  }, [gamesFromSession]);
+
+  const handleGameSelectionChange = (event) => {
+    setSelectedGameId(event.target.value);
   };
 
-  // Handle form submission
-  const handleFormSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
+  const handlePlayerFormSubmit = async (values, { setSubmitting, setErrors, resetForm }) => {
+    if (!selectedGameId) {
+      setErrors({ server: 'Please select a game before adding the player.' });
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const gameIdNum = Number(selectedGameId);
-      const response = await callApi(
-        `/games/${gameIdNum}/players?include=character`,
+      const gameIdToSubmit = Number(selectedGameId);
+      const payload = {
+        name: values.name,
+        summary: values.summary || null,
+        character: {
+          ...values.character,
+          level: Number(values.character.level),
+          icon: values.character.icon || null,
+        },
+      };
+
+      const responseData = await callApi(
+        `/games/${gameIdToSubmit}/players?include=character`,
         {
-          method: "POST",
-          body: JSON.stringify({
-            name: values.name,
-            summary: values.summary,
-            character: {
-              ...values.character,
-              level: Number(values.character.level),
-            },
-          }),
+          method: 'POST',
+          body: JSON.stringify(payload),
         }
       );
-      resetForm();
-      if (onSuccess) {
-        onSuccess(gameIdNum, response, response.character);
-      }
-    } catch (e) {
-      console.error("API error response:", e);
-      if (e.errors) {
-        setErrors(e.errors);
+
+      if (responseData?.id && responseData.character) {
+        resetForm();
+        if (typeof onSuccess === 'function') {
+          onSuccess(gameIdToSubmit, responseData, responseData.character);
+        }
+        if (!initialGameId && gamesFromSession.length > 0) {
+          setSelectedGameId(gamesFromSession[0].id.toString());
+        } else if (initialGameId) {
+          setSelectedGameId(initialGameId.toString());
+        } else {
+          setSelectedGameId('');
+        }
       } else {
-        setErrors({ server: e.message });
+        console.warn('New Player API response was not as expected:', responseData);
+        setErrors({ server: 'Failed to add player: Unexpected server response.' });
       }
-    } finally {
-      setSubmitting(false);
+    } catch (err) {
+      console.error('API error response creating new player:', err);
+      if (err.errors && typeof err.errors === 'object' && !Array.isArray(err.errors)) {
+        setErrors(err.errors);
+      } else {
+        setErrors({ server: err.message || 'An unexpected error occurred. Please try again.' });
+      }
     }
   };
 
-  // Handle game selection change
-  const handleGameChange = (e) => {
-    setSelectedGameId(e.target.value);
-  };
+  const renderFormContent = ({ isSubmitting, errors }) => (
+    <Form noValidate className="new-player-form">
+      {errors.server && (
+        <div className="error-message server-error" role="alert">
+          {errors.server}
+        </div>
+      )}
+
+      <div className="form-group">
+        <label htmlFor={gameSelectInputId} className="form-label">
+          Associate with Game:
+        </label>
+        <select
+          id={gameSelectInputId}
+          name="gameSelection"
+          value={selectedGameId}
+          onChange={handleGameSelectionChange}
+          className="form-select"
+          aria-required="true"
+        >
+          <option value="" disabled={selectedGameId !== ""}>
+            {gamesFromSession.length > 0 ? '-- Select a Game --' : '-- No Games Available --'}
+          </option>
+          {gameOptionElements}
+        </select>
+      </div>
+
+      <fieldset className="form-fieldset">
+        <legend className="form-legend">Player Information</legend>
+        <FormField
+          label="Player Name"
+          name="name"
+          type="text"
+          placeholder="Enter player's name"
+          autoComplete="off"
+        />
+        <FormField
+          label="Player Summary (Optional)"
+          name="summary"
+          as="textarea"
+          placeholder="A brief description of the player"
+        />
+      </fieldset>
+
+      <fieldset className="form-fieldset">
+        <legend className="form-legend">Starting Character</legend>
+        <FormField
+          label="Character Name"
+          name="character.name"
+          type="text"
+          placeholder="Character's name"
+        />
+        <FormField
+          label="Class"
+          name="character.character_class"
+          type="text"
+          placeholder="e.g., Barbarian, Sorcerer"
+        />
+        <FormField
+          label="Level"
+          name="character.level"
+          type="number"
+          placeholder="1"
+          min="1"
+        />
+        <FormField
+          label="Icon URL (Optional)"
+          name="character.icon"
+          type="url"
+          placeholder="https://example.com/character.png"
+        />
+        <FormField
+          label="Character is Active"
+          name="character.is_active"
+          type="checkbox"
+        />
+      </fieldset>
+
+      <div className="form-actions">
+        <button
+          type="submit"
+          disabled={isSubmitting || !selectedGameId}
+          className="button submit-button"
+        >
+          {isSubmitting ? 'Adding Player...' : 'Add Player and Character'}
+        </button>
+      </div>
+    </Form>
+  );
 
   return (
-    <Formik
-      initialValues={initialFormValues}
-      validationSchema={NewPlayerAndCharacterSchema}
-      onSubmit={handleFormSubmit}
-    >
-      {({ isSubmitting, errors }) => (
-        <Form>
-          {/* Server error */}
-          {errors.server && <div className="error">{errors.server}</div>}
-
-          {/* Game selection dropdown */}
-          <label style={{ marginBottom: '0.5rem', display: 'block' }}>
-            Game:&nbsp;
-            <select
-              value={selectedGameId || ''}
-              onChange={handleGameChange}
-            >
-              <option value="" disabled>Select a game</option>
-              {gameOptions}
-            </select>
-          </label>
-
-
-          {/* Player info */}
-          <FormField label="Player Name" name="name" />
-          <FormField label="Summary" name="summary" as="textarea" />
-
-          {/* Character section */}
-          <h4>Starting Character</h4>
-          <FormField label="Character Name" name="character.name" />
-          <FormField label="Class" name="character.character_class" />
-          <FormField label="Level" name="character.level" type="number" />
-          <FormField label="Icon URL" name="character.icon" />
-          <FormField label="Active" name="character.is_active" type="checkbox" />
-
-          <button type="submit" disabled={isSubmitting}>Add Player</button>
-        </Form>
-      )}
-    </Formik>
+    <div className="new-player-container">
+      <h3>Add New Player & Starting Character</h3>
+      <Formik
+        initialValues={initialFormValues}
+        validationSchema={NewPlayerAndCharacterSchema}
+        onSubmit={handlePlayerFormSubmit}
+        enableReinitialize
+      >
+        {renderFormContent}
+      </Formik>
+    </div>
   );
 }

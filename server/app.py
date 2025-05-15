@@ -166,38 +166,39 @@ class EditGame(Resource):
 #         db.session.commit()
 #         return {'share_token': game.share_token}, 200
 
-class NewPlayer(Resource):
-    def post(self, game_id):
-        game = db.session.get(Game, game_id)
-        if not game:
-            abort(404, message=f"Game with id {game_id} not found")
-        if game.user_id != session.get('user_id'):
-            return {'error': '401 unauthorized'}, 401
-        data = request.get_json()
-        try:
-            loaded = player_schema.load(data)
-        except ValidationError as err:
-            return {'errors': err.messages}, 400
-        new_player = Player(**loaded)
-        db.session.add(new_player)
-        db.session.commit()
-        return player_schema.dump(new_player), 201
 
+# Unified NewPlayer resource for both standalone and nested routes
 class NewPlayer(Resource):
     def get(self):
-        # Optionally implement listing if desired
         user_id = session.get('user_id')
         players = db.session.query(Player).filter_by(user_id=user_id).all()
-        return PlayerSchema.dump(players), 200
+        return player_schema.dump(players, many=True), 200
 
-    def post(self):
-        # Create a new Player alone (no game assignment)
+    def post(self, game_id=None):
         data = request.get_json() or {}
+        if game_id is not None:
+            # Ensure game exists and belongs to user
+            game = db.session.get(Game, game_id)
+            if not game:
+                abort(404, message=f"Game with id {game_id} not found")
+            if game.user_id != session.get('user_id'):
+                return {'error': '401 unauthorized'}, 401
+            try:
+                loaded = player_schema.load(data)
+            except ValidationError as err:
+                return {'errors': err.messages}, 400
+            new_player = Player(**loaded)
+            new_player.game_id = game_id  # or assign via association
+            db.session.add(new_player)
+            db.session.commit()
+            return player_schema.dump(new_player), 201
+
         try:
             loaded = player_schema.load(data)
         except ValidationError as err:
             return {'errors': err.messages}, 400
         new_player = Player(**loaded)
+        new_player.user_id = session.get('user_id')
         db.session.add(new_player)
         db.session.commit()
         return player_schema.dump(new_player), 201
@@ -207,6 +208,9 @@ class EditPlayer(Resource):
         player = db.session.get(Player, player_id)
         if not player:
             abort(404, message=f"Player with id {player_id} not found")
+        # Authorization: ensure player belongs to one of the user's games
+        if not any(char.game.user_id == session.get('user_id') for char in player.characters):
+            return {'error': '401 unauthorized'}, 401
         updates = request.get_json()
         try:
             loaded_updates = player_schema.load(updates, partial=True)
@@ -221,6 +225,9 @@ class EditPlayer(Resource):
         player = db.session.get(Player, player_id)
         if not player:
             abort(404, message=f"Player with id {player_id} not found")
+        # Authorization: ensure player belongs to one of the user's games
+        if not any(char.game.user_id == session.get('user_id') for char in player.characters):
+            return {'error': '401 unauthorized'}, 401
         db.session.delete(player)
         db.session.commit()
         return '', 204
@@ -275,6 +282,9 @@ class NewCharacter(Resource):
         player = db.session.get(Player, player_id)
         if not player:
             abort(404, message=f"Player with id {player_id} not found")
+        # Authorization: ensure player belongs to a game owned by user
+        if not any(char.game.user_id == session.get('user_id') for char in player.characters):
+            return {'error': '401 unauthorized'}, 401
         data = request.get_json()
         data['player_id'] = player_id
         try:
@@ -366,7 +376,7 @@ api.add_resource(CheckSession, '/api/check_session')
 api.add_resource(Logout, '/api/logout')
 api.add_resource(NewGame, '/api/games')
 api.add_resource(EditGame, '/api/games/<int:game_id>')
-api.add_resource(NewPlayer, '/api/players')
+api.add_resource(NewPlayer, '/api/players', '/api/games/<int:game_id>/players')
 api.add_resource(EditPlayer, '/api/players/<int:player_id>')
 api.add_resource(NewSession, '/api/games/<int:game_id>/sessions')
 api.add_resource(EditSession, '/api/sessions/<int:session_id>')

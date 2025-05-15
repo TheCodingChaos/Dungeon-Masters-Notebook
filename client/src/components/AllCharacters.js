@@ -10,10 +10,8 @@ export default function AllCharacters() {
     const [filterPlayerId, setFilterPlayerId] = useState("");
     const [editingId, setEditingId] = useState(null);
 
-    // 1) Pull games from context
     const games = sessionData.user && sessionData.user.games ? sessionData.user.games : [];
 
-    // 2) Flatten all characters with player and game info using for loops
     const allCharacters = [];
     for (let i = 0; i < games.length; i++) {
       const game = games[i];
@@ -35,7 +33,6 @@ export default function AllCharacters() {
       }
     }
 
-    // 3) Dedupe: only first occurrence of each id
     const seen = {};
     const uniqueChars = [];
     for (let i = 0; i < allCharacters.length; i++) {
@@ -46,7 +43,6 @@ export default function AllCharacters() {
       }
     }
 
-    // 4) Filter by game
     let filteredByGame = [];
     if (filterGameId) {
       for (let i = 0; i < uniqueChars.length; i++) {
@@ -58,7 +54,6 @@ export default function AllCharacters() {
       filteredByGame = uniqueChars;
     }
 
-    // 5) Filter by player
     let filteredChars = [];
     if (filterPlayerId) {
       for (let i = 0; i < filteredByGame.length; i++) {
@@ -70,14 +65,12 @@ export default function AllCharacters() {
       filteredChars = filteredByGame;
     }
 
-    // 6) Build gameOptions
     const gameOptions = [];
     for (let i = 0; i < games.length; i++) {
       const g = games[i];
       gameOptions.push({ value: g.id, label: g.title });
     }
 
-    // 7) Build playerOptions
     const allPlayers = [];
     for (let i = 0; i < games.length; i++) {
       const players = games[i].players || [];
@@ -95,13 +88,11 @@ export default function AllCharacters() {
       }
     }
 
-    // 8) Filters array
     const filters = [
       { label: "Filter by Game", options: gameOptions, value: filterGameId, onChange: e => setFilterGameId(e.target.value) },
       { label: "Filter by Player", options: playerOptions, value: filterPlayerId, onChange: e => setFilterPlayerId(e.target.value) }
     ];
 
-    // 9) Handlers & renderItem
     const handleEdit = (character) => {
       setEditingId(character.id);
     };
@@ -174,7 +165,6 @@ export default function AllCharacters() {
       return jsx;
     };
 
-    // 10) Pure JSX return
     return (
       <div>
         <FilterableList

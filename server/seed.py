@@ -1,5 +1,17 @@
 from datetime import date, timedelta
-from random import randint
+from random import randint, choice
+DEFAULT_IMAGES = [
+    "https://static.vecteezy.com/system/resources/thumbnails/051/960/031/small/pixel-art-warrior-character-holding-a-sword-in-armor-and-red-cape-ideal-for-gaming-content-and-retro-themed-designs-png.png",
+    "https://static.vecteezy.com/system/resources/thumbnails/051/960/254/small/pixel-art-of-a-heroic-character-holding-a-bright-flame-dressed-in-fantasy-attire-with-a-red-cape-vibrant-detailed-and-magical-illustration-png.png",
+    "https://as2.ftcdn.net/jpg/05/65/42/35/1000_F_565423542_jusEcTj3M1mnvI6atklmj9ltzIrzhkiH.jpg",
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGhKPArPklv0kF9XY385Qc_x92Qhx5ozZZXlkL7x3DX-VQcFnuN96v2DgvAR1YhiJNBtY&usqp=CAU",
+    "https://preview.redd.it/vvzpigme0ds61.jpg?width=640&crop=smart&auto=webp&s=baa3b256c0011a13f3c3fb01700f9890b7acce9f",
+    "https://static.vecteezy.com/system/resources/previews/004/829/271/non_2x/knight-character-in-pixel-art-style-vector.jpg",
+    "https://i.redd.it/6lmzvgb3uje31.png",
+    "https://www.shutterstock.com/image-vector/pixel-art-wizard-long-beard-260nw-2544146115.jpg",
+    "https://thumbs.dreamstime.com/b/pixel-art-mage-wizard-back-272560987.jpg",
+    "https://preview.redd.it/pixel-art-of-yuan-ti-warlock-v0-9zw5qdwen1g91.png?auto=webp&s=d18555d7e47f32c97f24881874038fd2054b083a"
+]
 from models import db, User, Game, Player, Session, Character
 from app import app
 
@@ -150,7 +162,7 @@ if __name__ == '__main__':
                         name=demo_name,
                         character_class="Adventurer",
                         level=randint(1,5),
-                        icon="",
+                        icon=choice(DEFAULT_IMAGES),
                         is_active=True,
                         player_id=player.id,
                         game_id=demo_games[game_idx].id
@@ -280,7 +292,7 @@ if __name__ == '__main__':
                         "Druid", "Paladin", "Ranger", "Bard", "Monk"
                     ]),
                     level=randint(1, 20),
-                    icon="",
+                    icon=choice(DEFAULT_IMAGES),
                     is_active=rc([True, False]),
                     player_id=player.id,
                     game_id=game_id

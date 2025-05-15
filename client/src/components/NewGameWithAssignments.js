@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useMemo } from 'react';
 import { Formik, Form, FieldArray } from 'formik';
 import * as Yup from 'yup';
 import FormField from './FormField';
@@ -6,250 +6,291 @@ import Modal from './Modal';
 import callApi from '../utils/CallApi';
 import { SessionContext } from '../contexts/SessionContext';
 
-
-// Returns a fresh assignment object
-function getDefaultAssignment() {
-    return {
-        player_id: '',
-        player: null,
-        character: {
-            name: '',
-            character_class: '',
-            level: 1,
-            icon: '',
-            is_active: false,
-        },
-    };
-}
-
-// Validation for Game metadata + assignments
-const NewGameSchema = Yup.object({
-    title: Yup.string().required('Required'),
-    system: Yup.string().required('Required'),
-    status: Yup.string().required('Required'),
-    description: Yup.string(),
-    setting: Yup.string(),
-    start_date: Yup.date().nullable(),
-    assignments: Yup.array(),
+// Internal validation for character entries
+const CharacterSchemaInternal = Yup.object().shape({
+  name: Yup.string().required('Character name is required'),
+  character_class: Yup.string().required('Character class is required'),
+  level: Yup.number()
+    .min(1, 'Level must be at least 1')
+    .integer('Level must be a whole number')
+    .required('Level is required'),
+  icon: Yup.string()
+    .url('Icon URL must be valid')
+    .nullable()
+    .transform(v => (v === '' ? null : v)),
+  is_active: Yup.boolean(),
 });
 
-export default function NewGameWithAssignments(props) {
-    const onSuccess = props.onSuccess;
-    const context = useContext(SessionContext);
-    const sessionData = context.sessionData;
+// Internal validation for assignments
+const AssignmentSchemaInternal = Yup.object().shape({
+  player_id: Yup.string().when('player', {
+    is: p => !p || !p.name,
+    then: schema => schema.required('Existing player is required'),
+    otherwise: schema => schema.nullable(),
+  }),
+  player: Yup.object().shape({
+    name: Yup.string().when('player_id', {
+      is: val => !val,
+      then: schema => schema.required('New player name is required'),
+      otherwise: schema => schema.nullable(),
+    }),
+    summary: Yup.string().nullable(),
+  }).nullable(),
+  character: CharacterSchemaInternal.required('Character is required'),
+});
 
-    let allPlayers = [];
-    // Include any top-level players (unattached)
-    if (sessionData.user && sessionData.user.players) {
-        for (let p of sessionData.user.players) {
-            allPlayers.push(p);
-        }
-    }
-    // Include players from each game
-    if (sessionData.user && sessionData.user.games) {
-        for (let g of sessionData.user.games) {
-            if (g.players) {
-                for (let p of g.players) {
-                    allPlayers.push(p);
-                }
-            }
-        }
-    }
-    const seen = {};
-    const uniquePlayers = allPlayers.filter(p => {
-        if (!seen[p.id]) { seen[p.id] = true; return true; }
-        return false;
-    });
+// Validation for the entire form
+const NewGameSchema = Yup.object().shape({
+  title: Yup.string().required('Game title is required'),
+  system: Yup.string().required('Game system is required'),
+  status: Yup.string().required('Game status is required'),
+  description: Yup.string().nullable(),
+  setting: Yup.string().nullable(),
+  start_date: Yup.date()
+    .nullable()
+    .transform(v => (v instanceof Date && !isNaN(v) ? v : null)),
+  assignments: Yup.array().of(AssignmentSchemaInternal).nullable(),
+});
 
-    const [modalConfig, setModalConfig] = useState({ open: false, type: null, index: null });
+export default function NewGameWithAssignments({ onSuccess }) {
+  const { sessionData } = useContext(SessionContext);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, type: null, assignmentIndex: null });
 
-    // Initial form values
-    const initialFormValues = {
-      title: '',
-      system: '',
-      status: '',
-      description: '',
-      setting: '',
-      start_date: '',
-      assignments: [],
-    };
+  // Compute unique players once per sessionData change
+  const uniquePlayers = useMemo(() => {
+    const all = [];
+    const user = sessionData.user;
+    if (!user) return [];
+    if (user.players) all.push(...user.players);
+    if (user.games) user.games.forEach(g => g.players && all.push(...g.players));
+    return Array.from(new Map(all.filter(p => p && p.id).map(p => [p.id, p])).values());
+  }, [sessionData.user]);
 
-    // Form submission handler
-    const handleSubmit = async (values, { setSubmitting, resetForm, setFieldError }) => {
-      // Manual validation of assignments
-      for (let idx = 0; idx < values.assignments.length; idx++) {
-        const a = values.assignments[idx];
-        if (!(a.player_id || (a.player && a.player.name))) continue;
-        if (a.player_id) {
-          if (!a.character.name) {
-            setFieldError(`assignments.${idx}.character.name`, 'Required');
-            setSubmitting(false);
-            return;
-          }
-        } else {
-          if (!a.player?.name) {
-            setFieldError(`assignments.${idx}.player.name`, 'Required');
-            setSubmitting(false);
-            return;
-          }
-          if (!a.character.name) {
-            setFieldError(`assignments.${idx}.character.name`, 'Required');
-            setSubmitting(false);
-            return;
-          }
-        }
-      }
-      try {
-        const filtered = values.assignments.filter(a =>
-          (a.player_id || a.player?.name) && a.character?.name
-        );
-        const payload = { ...values, assignments: filtered };
-        const newGame = await callApi('/games', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        resetForm();
-        if (onSuccess) onSuccess(newGame);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setSubmitting(false);
-      }
-    };
+  // Initial form values
+  const initialGameFormValues = {
+    title: '',
+    system: '',
+    status: '',
+    description: '',
+    setting: '',
+    start_date: '',
+    assignments: [],
+  };
 
-    // Add assignment from dropdown
-    const handleAddAssignment = (e, arrayHelpers) => {
-      const val = e.target.value;
-      if (!val) return;
-      let newAssign = getDefaultAssignment();
-      if (val === 'new') {
-        delete newAssign.player_id;
-        newAssign.player = { name: '', summary: '' };
-        arrayHelpers.push(newAssign);
-        setModalConfig({ open: true, type: 'player', index: arrayHelpers.form.values.assignments.length });
-      } else {
-        newAssign.player_id = Number(val);
-        arrayHelpers.push(newAssign);
-        setModalConfig({ open: true, type: 'character', index: arrayHelpers.form.values.assignments.length });
-      }
-    };
-
-    // Render assignment list items
-    const renderAssignmentItem = (assign, i, arrayHelpers) => {
-      if (!assign.character?.name) return null;
-      const playerName = assign.player_id
-        ? (uniquePlayers.find(p => p.id === assign.player_id)?.name)
-        : assign.player?.name;
-      return (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-          <span>{playerName} / {assign.character.name}</span>
-          <button
-            type="button"
-            onClick={() => setModalConfig({ open: true, type: assign.player ? 'player' : 'character', index: i })}
-            style={{ marginLeft: '8px' }}
-          >Edit</button>
-          <button
-            type="button"
-            onClick={() => arrayHelpers.remove(i)}
-            style={{ marginLeft: '4px' }}
-          >Remove</button>
-        </div>
-      );
-    };
-
-    // Render modal content
-    const renderModalContent = (formikProps) => {
-      const { setFieldError } = formikProps;
-      const { type, index } = modalConfig;
-      if (type === 'player') {
-        return (
-          <>
-            <FormField label="Player Name" name={`assignments.${index}.player.name`} />
-            <FormField label="Summary" name={`assignments.${index}.player.summary`} as="textarea" />
-            <button type="button" onClick={() => {
-              const name = formikProps.values.assignments[index].player?.name?.trim();
-              if (!name) {
-                setFieldError(`assignments.${index}.player.name`, 'Required');
-                return;
-              }
-              setModalConfig({ open: true, type: 'character', index });
-            }}>Next: Character</button>
-            <button type="button" onClick={() => setModalConfig({ open: false, type: null, index: null })} style={{ marginLeft: '8px' }}>Cancel</button>
-          </>
-        );
-      } else {
-        return (
-          <>
-            <FormField label="Character Name" name={`assignments.${index}.character.name`} />
-            <FormField label="Class" name={`assignments.${index}.character.character_class`} />
-            <FormField label="Level" name={`assignments.${index}.character.level`} type="number" />
-            <FormField label="Icon URL" name={`assignments.${index}.character.icon`} />
-            <FormField label="Active" name={`assignments.${index}.character.is_active`} type="checkbox" />
-            <button type="button" onClick={() => {
-              const char = formikProps.values.assignments[index].character;
-              if (!char.name?.trim()) {
-                setFieldError(`assignments.${index}.character.name`, 'Required');
-                return;
-              }
-              if (!char.character_class?.trim()) {
-                setFieldError(`assignments.${index}.character.character_class`, 'Required');
-                return;
-              }
-              setModalConfig({ open: false, type: null, index: null });
-            }}>Save Character</button>
-            <button type="button" onClick={() => setModalConfig({ open: false, type: null, index: null })} style={{ marginLeft: '8px' }}>Cancel</button>
-          </>
-        );
-      }
-    };
-
-    return (
-        <Formik
-            initialValues={initialFormValues}
-            validationSchema={NewGameSchema}
-            onSubmit={handleSubmit}
-        >
-            {function (formikProps) {
-                const isSubmitting = formikProps.isSubmitting;
-                return (
-                    <div>
-                        <Form>
-                            {/* Game fields */}
-                            <FormField label="Title" name="title" />
-                            <FormField label="System" name="system" />
-                            <FormField label="Status" name="status" />
-                            <FormField label="Description" name="description" as="textarea" />
-                            <FormField label="Setting" name="setting" as="textarea" />
-                            <FormField label="Start Date" name="start_date" type="date" />
-
-                            {/* Assignments section */}
-                            <FieldArray name="assignments">
-                              {(arrayHelpers) => (
-                                <div>
-                                  {/* Existing assignments */}
-                                  {arrayHelpers.form.values.assignments.map((assign, i) =>
-                                    renderAssignmentItem(assign, i, arrayHelpers)
-                                  )}
-                                  {/* Dropdown to add */}
-                                  <select value="" onChange={(e) => handleAddAssignment(e, arrayHelpers)}>
-                                    <option value="" disabled>Add a player...</option>
-                                    {uniquePlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    <option value="new">+ New Player...</option>
-                                  </select>
-                                </div>
-                              )}
-                            </FieldArray>
-
-                            <button type="submit" disabled={isSubmitting}>Create Game</button>
-                        </Form>
-
-                        {/* Modal for inline new player or character */}
-                        <Modal isOpen={modalConfig.open} onClose={() => setModalConfig({ open: false, type: null, index: null })}>
-                          {renderModalContent(formikProps)}
-                        </Modal>
-                    </div>
-                );
-            }}
-        </Formik>
+  // Submit handler with robust error parsing
+  const handleMainFormSubmit = async (values, { setErrors, resetForm, setSubmitting }) => {
+    const assignmentsToSubmit = values.assignments.filter(a =>
+      (a.player_id || (a.player && a.player.name)) && a.character.name
     );
+    const payload = { ...values, assignments: assignmentsToSubmit };
+    try {
+      const newGame = await callApi('/games', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (newGame?.id) {
+        resetForm();
+        onSuccess?.(newGame);
+      } else {
+        console.warn('Unexpected API response:', newGame);
+        setErrors({ server: 'Failed to create game: Unexpected server response.' });
+      }
+    } catch (err) {
+      console.error('Error creating game:', err);
+      if (err.errors && typeof err.errors === 'object' && !Array.isArray(err.errors)) {
+        setErrors(err.errors);
+      } else {
+        setErrors({ server: err.message || 'An unexpected error occurred. Please try again.' });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Add assignment (player or new player)
+  const handleAddAssignmentType = (event, arrayHelpers) => {
+    const val = event.target.value;
+    if (!val) return;
+    event.target.value = '';
+    const defaultAssign = { player_id: '', player: null, character: { name: '', character_class: '', level: 1, icon: '', is_active: false } };
+    const idx = arrayHelpers.form.values.assignments.length;
+    if (val === '__new_player') {
+      arrayHelpers.push({ ...defaultAssign, player: { name: '', summary: '' } });
+      setModalConfig({ isOpen: true, type: 'player', assignmentIndex: idx });
+    } else {
+      const playerIdNum = Number(val);
+      arrayHelpers.push({ ...defaultAssign, player_id: playerIdNum });
+      setModalConfig({ isOpen: true, type: 'character', assignmentIndex: idx });
+    }
+  };
+
+  // Render each assignment item
+  const renderAssignmentListItem = (assignment, index, arrayHelpers) => {
+    const playerName = assignment.player_id
+      ? uniquePlayers.find(p => p.id === assignment.player_id)?.name
+      : assignment.player?.name;
+    return (
+      <div key={index} className="assignment-item">
+        <span className="assignment-info">
+          {playerName} / {assignment.character.name}
+        </span>
+        <div className="assignment-actions">
+          <button
+            type="button"
+            className="button-edit"
+            onClick={() => setModalConfig({
+              isOpen: true,
+              type: assignment.player ? 'player' : 'character',
+              assignmentIndex: index,
+            })}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="button-remove"
+            onClick={() => arrayHelpers.remove(index)}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render modal form content for player/character
+  const renderModalFormContent = formikProps => {
+    const { values } = formikProps;
+    const { isOpen, type, assignmentIndex } = modalConfig;
+    if (!isOpen) return null;
+    const current = values.assignments[assignmentIndex];
+    if (type === 'player') {
+      return (
+        <>
+          <h4>Add New Player Details</h4>
+          <FormField
+            label="Player Name"
+            name={`assignments.${assignmentIndex}.player.name`}
+            placeholder="Enter player's name"
+          />
+          <FormField
+            label="Player Summary (Optional)"
+            name={`assignments.${assignmentIndex}.player.summary`}
+            as="textarea"
+            placeholder="Brief summary"
+          />
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="button-primary"
+              onClick={() => setModalConfig(prev => ({ ...prev, type: 'character' }))}
+            >
+              Next: Add Character
+            </button>
+            <button
+              type="button"
+              className="button"
+              onClick={() => setModalConfig({ isOpen: false, type: null, assignmentIndex: null })}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      );
+    }
+    return (
+      <>
+        <h4>
+          Add Character Details for {current.player?.name || uniquePlayers.find(p => p.id === current.player_id)?.name}
+        </h4>
+        <FormField label="Character Name" name={`assignments.${assignmentIndex}.character.name`} placeholder="Character's name" />
+        <FormField label="Class" name={`assignments.${assignmentIndex}.character.character_class`} placeholder="e.g., Warrior" />
+        <FormField label="Level" name={`assignments.${assignmentIndex}.character.level`} type="number" placeholder="1" />
+        <FormField label="Icon URL (Optional)" name={`assignments.${assignmentIndex}.character.icon`} type="url" placeholder="https://..." />
+        <FormField label="Is Active" name={`assignments.${assignmentIndex}.character.is_active`} type="checkbox" />
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="button-primary"
+            onClick={() => setModalConfig({ isOpen: false, type: null, assignmentIndex: null })}
+          >
+            Save Character
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() => setModalConfig({ isOpen: false, type: null, assignmentIndex: null })}
+          >
+            Cancel
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  // Main form render helper
+  const renderMainForm = formikProps => {
+    const { isSubmitting, errors, values } = formikProps;
+    return (
+      <Form noValidate className="new-game-assignments-form">
+        <h3>Game Details</h3>
+        {errors.server && <div className="error-message server-error">{errors.server}</div>}
+        <FormField label="Title" name="title" placeholder="Name of your game" />
+        <FormField label="System" name="system" placeholder="e.g., D&D 5e" />
+        <FormField label="Status" name="status" placeholder="e.g., Planning" />
+        <FormField label="Description (Optional)" name="description" as="textarea" placeholder="Brief overview" />
+        <FormField label="Setting (Optional)" name="setting" as="textarea" placeholder="Game world" />
+        <FormField label="Start Date (Optional)" name="start_date" type="date" />
+
+        <h3>Player Assignments</h3>
+        <FieldArray name="assignments">
+          {arrayHelpers => (
+            <div className="assignments-section">
+              {values.assignments?.map((a, idx) => renderAssignmentListItem(a, idx, arrayHelpers))}
+              <div className="add-assignment-control">
+                <select
+                  value=""
+                  onChange={e => handleAddAssignmentType(e, arrayHelpers)}
+                  className="add-assignment-select"
+                >
+                  <option value="" disabled>Add Player Assignment...</option>
+                  {uniquePlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="__new_player">+ Create New Player</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </FieldArray>
+
+        <div className="form-actions main-form-actions">
+          <button type="submit" disabled={isSubmitting} className="button-primary submit-button">
+            {isSubmitting ? 'Creating Game...' : 'Create Game with Assignments'}
+          </button>
+        </div>
+
+        <Modal
+          isOpen={modalConfig.isOpen}
+          onClose={() => setModalConfig({ isOpen: false, type: null, assignmentIndex: null })}
+        >
+          <div className="modal-form-content">
+            {renderModalFormContent(formikProps)}
+          </div>
+        </Modal>
+      </Form>
+    );
+  };
+
+  return (
+    <div className="new-game-with-assignments-container">
+      <h2>Start a New Game with Player Assignments</h2>
+      <Formik
+        initialValues={initialGameFormValues}
+        validationSchema={NewGameSchema}
+        onSubmit={handleMainFormSubmit}
+        enableReinitialize
+      >
+        {renderMainForm}
+      </Formik>
+    </div>
+  );
 }

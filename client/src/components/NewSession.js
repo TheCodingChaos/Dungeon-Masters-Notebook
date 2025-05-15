@@ -1,66 +1,123 @@
-import { useContext } from "react";
-import FormField from "./FormField";
-import { SessionContext } from "../contexts/SessionContext";
-import * as Yup from "yup";
+import React, { useContext } from 'react';
 import { Formik, Form } from 'formik';
+import * as Yup from 'yup';
 import callApi from '../utils/CallApi';
+import FormField from './FormField';
+import { SessionContext } from '../contexts/SessionContext';
+import '../styles/pages.css';
 
-// Define validation schema for a new session
-const NewSessionSchema = Yup.object({
-  date: Yup.date().required("Date is required"),
-  summary: Yup.string(),
+// Helper to default the date field to today
+const getTodayDateString = () => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// Robust validation schema
+const NewSessionSchema = Yup.object().shape({
+  date: Yup.date()
+    .required('Date is required'),
+  summary: Yup.string()
+    .max(2000, 'Summary is too long')
+    .nullable(),
 });
 
-// Component for creating a new game session
 export default function NewSession({ gameId, onSuccess }) {
   const { setSessionData } = useContext(SessionContext);
 
-  // Initial form values
-  const initialFormValues = { date: '', summary: '' };
+  // Initial form values with today's date
+  const initialNewSessionValues = {
+    date: getTodayDateString(),
+    summary: '',
+  };
 
-  // Form submission handler
-  const handleFormSubmit = async (values, { setSubmitting, resetForm, setErrors }) => {
+  // Submission handler with strong error parsing
+  const handleCreateSessionSubmit = async (values, { setErrors, resetForm, setSubmitting }) => {
     try {
-      const newSession = await callApi(
+      const payload = {
+        date: values.date,
+        summary: values.summary || null,
+      };
+      const newEntry = await callApi(
         `/games/${gameId}/sessions`,
-        {
-          method: 'POST',
-          body: JSON.stringify(values),
-        }
+        { method: 'POST', body: JSON.stringify(payload) }
       );
-      // Update context: append to this game's sessions
-      setSessionData(prev => {
-        const updatedGames = prev.user.games.map(g => {
-          if (g.id === gameId) {
-            return { ...g, sessions: [...(g.sessions||[]), newSession] };
+
+      if (newEntry?.id) {
+        // Append to the correct game's sessions in context
+        setSessionData(prev => ({
+          ...prev,
+          user: {
+            ...prev.user,
+            games: prev.user.games.map(g =>
+              g.id === gameId
+                ? { ...g, sessions: [...(g.sessions || []), newEntry] }
+                : g
+            )
           }
-          return g;
-        });
-        return { ...prev, user: { ...prev.user, games: updatedGames } };
-      });
-      resetForm();
-      if (onSuccess) onSuccess(newSession);
+        }));
+        resetForm();
+        onSuccess?.(newEntry);
+      } else {
+        console.warn('Unexpected API response:', newEntry);
+        setErrors({ server: 'Failed to create session: Unexpected server response.' });
+      }
     } catch (err) {
-      setErrors({ server: err.message });
+      console.error('Error creating session:', err);
+      if (err.errors && typeof err.errors === 'object' && !Array.isArray(err.errors)) {
+        setErrors(err.errors);
+      } else {
+        setErrors({ server: err.message || 'An unexpected error occurred. Please try again.' });
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  return (
-    <Formik
-      initialValues={initialFormValues}
-      validationSchema={NewSessionSchema}
-      onSubmit={handleFormSubmit}
-    >
-      {({ isSubmitting, errors }) => (
-        <Form>
-          {errors.server && <div className="error">{errors.server}</div>}
-          <FormField label="Date" name="date" type="date" />
-          <FormField label="Summary" name="summary" as="textarea" />
-          <button type="submit" disabled={isSubmitting}>Save</button>
-        </Form>
+  // Render helper for the form fields
+  const renderSessionFormFields = ({ isSubmitting, errors }) => (
+    <Form noValidate className="new-session-form">
+      {errors.server && (
+        <div className="error-message server-error">{errors.server}</div>
       )}
-    </Formik>
+
+      <FormField
+        label="Session Date"
+        name="date"
+        type="date"
+      />
+      <FormField
+        label="Summary (Optional)"
+        name="summary"
+        as="textarea"
+        placeholder="Key events, decisions, or memorable moments"
+      />
+
+      <div className="form-actions">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="button submit-button"
+        >
+          {isSubmitting ? 'Saving...' : 'Save Session'}
+        </button>
+      </div>
+    </Form>
+  );
+
+  return (
+    <div className="new-session-container">
+      <h3>Log New Game Session</h3>
+      <Formik
+        initialValues={initialNewSessionValues}
+        validationSchema={NewSessionSchema}
+        onSubmit={handleCreateSessionSubmit}
+        enableReinitialize
+      >
+        {renderSessionFormFields}
+      </Formik>
+    </div>
   );
 }
