@@ -19,7 +19,7 @@ app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "dev_secret_key")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///app.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False
 app.json.compact = False
 
 metadata = MetaData(naming_convention={
@@ -33,7 +33,7 @@ bcrypt = Bcrypt(app)
 
 api = Api(app)
 
-CORS(app, supports_credentials=True, origins=["https://dungeon-masters-notebook.onrender.com"])
+CORS(app, supports_credentials=True, origins=["https://dungeon-masters-notebook.onrender.com", "http://localhost:3000"])
 
 ma = Marshmallow(app)
 

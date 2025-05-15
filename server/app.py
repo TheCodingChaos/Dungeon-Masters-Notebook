@@ -20,7 +20,7 @@ characters_schema = CharacterSchema(many=True)
 def login_check():
     if request.method == 'OPTIONS':
         return
-    open_paths = ['/signup', '/login', '/check_session', '/logout']
+    open_paths = ['/api/signup', '/api/login', '/api/check_session', '/api/logout']
     if request.path in open_paths:
         return
     if not session.get('user_id'):
@@ -157,6 +157,14 @@ class EditGame(Resource):
         db.session.delete(game)
         db.session.commit()
         return '', 204
+    
+# class ShareGame(Resource):
+#     def patch(self, game_id):
+#         game = db.session.get_or_404(game_id)
+#         data = request.get_json()
+#         game.is_sharable = bool(data.get('is_sharable', False))
+#         db.session.commit()
+#         return {'share_token': game.share_token}, 200
 
 class NewPlayer(Resource):
     def post(self, game_id):
@@ -176,11 +184,6 @@ class NewPlayer(Resource):
         return player_schema.dump(new_player), 201
 
 class NewPlayer(Resource):
-    """
-    Resource for creating and listing players independently of games.
-    POST /players  -> create a new unattached player.
-    GET /players   -> list all players for the current user.
-    """
     def get(self):
         # Optionally implement listing if desired
         user_id = session.get('user_id')
@@ -357,19 +360,19 @@ class NewPlayerAndCharacter(Resource):
 
 
 # Register RESTful resources
-api.add_resource(Signup, '/signup')
-api.add_resource(Login, '/login')
-api.add_resource(CheckSession, '/check_session')
-api.add_resource(Logout, '/logout')
-api.add_resource(NewGame, '/games')
-api.add_resource(EditGame, '/games/<int:game_id>')
-api.add_resource(NewPlayer, '/players')
-api.add_resource(EditPlayer, '/players/<int:player_id>')
-api.add_resource(NewSession, '/games/<int:game_id>/sessions')
-api.add_resource(EditSession, '/sessions/<int:session_id>')
-api.add_resource(NewCharacter, '/players/<int:player_id>/characters')
-api.add_resource(EditCharacter, '/characters/<int:character_id>')
-api.add_resource(NewPlayerAndCharacter, '/games/<int:game_id>/players')
+api.add_resource(Signup, '/api/signup')
+api.add_resource(Login, '/api/login')
+api.add_resource(CheckSession, '/api/check_session')
+api.add_resource(Logout, '/api/logout')
+api.add_resource(NewGame, '/api/games')
+api.add_resource(EditGame, '/api/games/<int:game_id>')
+api.add_resource(NewPlayer, '/api/players')
+api.add_resource(EditPlayer, '/api/players/<int:player_id>')
+api.add_resource(NewSession, '/api/games/<int:game_id>/sessions')
+api.add_resource(EditSession, '/api/sessions/<int:session_id>')
+api.add_resource(NewCharacter, '/api/players/<int:player_id>/characters')
+api.add_resource(EditCharacter, '/api/characters/<int:character_id>')
+api.add_resource(NewPlayerAndCharacter, '/api/games/<int:game_id>/players')
 # Removed RPC-style assignments endpoint; use POST /games instead
 
 if __name__ == '__main__':

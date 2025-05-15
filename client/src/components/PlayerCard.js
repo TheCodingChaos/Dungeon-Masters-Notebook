@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import CharacterCard from './CharacterCard';
 import NewCharacter from './NewCharacter';
 import { SessionContext } from '../contexts/SessionContext';
+import Modal from "./Modal";
 import "./PlayerCard.css";
 import "./CharacterCard.css";
 
@@ -81,19 +82,23 @@ export default function PlayerCard({ player, gameId }) {
         {characterCards}
       </div>
 
-      {/* Button to toggle character creation form */}
       <button onClick={handleToggleForm}>
         {toggleButtonLabel}
       </button>
-
-      {/* Show character form if toggled */}
-      {showForm && (
+      {/* Modal for new-character form */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+      >
         <NewCharacter
           gameId={gameId}
           playerId={player.id}
-          onSuccess={handleNewCharacterSuccess}
+          onSuccess={(newChar) => {
+            handleNewCharacterSuccess(newChar);
+            setShowForm(false);
+          }}
         />
-      )}
+      </Modal>
 
     </div>
   );

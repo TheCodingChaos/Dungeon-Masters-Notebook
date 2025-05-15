@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import FormField from "../components/FormField";
 import { Formik, Form } from "formik";
@@ -34,6 +34,13 @@ function SessionPage() {
     }
     if (session) break;
   }
+
+  useEffect(() => {
+    if (session === null) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [session, navigate]);
+  if (!session) return null;
 
   if (!session) {
     return (

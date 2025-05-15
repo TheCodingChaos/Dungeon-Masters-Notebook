@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react'; // Added useEffect
 import { Link } from 'react-router-dom';
 import Modal from './Modal';
 import callApi from '../utils/CallApi';
@@ -6,12 +6,12 @@ import { SessionContext } from '../contexts/SessionContext';
 import "./CharacterCard.css";
 
 export default function CharacterCard({ character }) {
-  // Destructure character properties for readability
+  // Destructure character properties - good practice
   const {
     id,
     name,
     icon,
-    character_class: characterClass,
+    character_class: characterClass, // Renaming is good
     level,
     is_active: isActive,
   } = character;
@@ -19,138 +19,160 @@ export default function CharacterCard({ character }) {
   const { setSessionData } = useContext(SessionContext);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   // Edit form state
-  const [editName, setEditName] = useState(name);
-  const [editClass, setEditClass] = useState(characterClass);
-  const [editLevel, setEditLevel] = useState(level);
-  const [editIcon, setEditIcon] = useState(icon);
-  const [editActive, setEditActive] = useState(isActive);
+  // An experienced junior might group related form state
+  const [editForm, setEditForm] = useState({
+    name: name,
+    characterClass: characterClass,
+    level: level,
+    icon: icon || '', // Ensure icon has a default for input
+    isActive: isActive,
+  });
+
+  // Effect to reset form state if the character prop changes or when modal opens
+  // This shows more attention to form lifecycle
+  useEffect(() => {
+    if (showEditModal) {
+      setEditForm({
+        name: name,
+        characterClass: characterClass,
+        level: level,
+        icon: icon || '',
+        isActive: isActive,
+      });
+    }
+  }, [showEditModal, name, characterClass, level, icon, isActive, character]); // character added to deps for completeness
+
+  const handleFormChange = (e) => {
+    const { name: inputName, value, type, checked } = e.target;
+    setEditForm(prevForm => ({
+      ...prevForm,
+      [inputName]: type === 'checkbox' ? checked : value,
+    }));
+  };
 
   // Handler for saving edits
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const updated = await callApi(
-      `/characters/${id}`,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name: editName,
-          character_class: editClass,
-          level: Number(editLevel),
-          icon: editIcon,
-          is_active: editActive,
-        })
-      }
-    );
-    setShowEditModal(false);
-    setSessionData(prev => {
-      const updatedGamesList = [];
-      for (let i = 0; i < prev.user.games.length; i++) {
-        const g = prev.user.games[i];
-        const updatedPlayersList = [];
-        for (let j = 0; j < g.players.length; j++) {
-          const p = g.players[j];
-          const updatedCharsList = [];
-          for (let k = 0; k < p.characters.length; k++) {
-            const ch = p.characters[k];
-            if (ch.id === id) {
-              updatedCharsList.push(updated);
-            } else {
-              updatedCharsList.push(ch);
-            }
-          }
-          updatedPlayersList.push({ ...p, characters: updatedCharsList });
+    try {
+      const updatedCharacter = await callApi(
+        `/characters/${id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: editForm.name,
+            character_class: editForm.characterClass,
+            level: Number(editForm.level),
+            icon: editForm.icon,
+            is_active: editForm.isActive,
+          }),
         }
-        updatedGamesList.push({ ...g, players: updatedPlayersList });
+      );
+
+      // Assuming callApi throws for network errors, but might return error structure for validation
+      if (updatedCharacter && updatedCharacter.error) {
+        console.error("Failed to update character:", updatedCharacter.error);
+        alert(`Error: ${updatedCharacter.error.message || 'Could not update character.'}`);
+        return;
       }
-      return {
+
+      setShowEditModal(false);
+      // Using .map() for cleaner immutable updates
+      setSessionData(prev => ({
         ...prev,
-        user: { ...prev.user, games: updatedGamesList }
-      };
-    });
+        user: {
+          ...prev.user,
+          games: prev.user.games.map(game => ({
+            ...game,
+            players: game.players.map(player => ({
+              ...player,
+              characters: player.characters.map(char =>
+                char.id === id ? updatedCharacter : char
+              ),
+            })),
+          })),
+        },
+      }));
+    } catch (error) {
+      console.error("API call failed during edit:", error);
+      alert("An error occurred while saving changes. Please try again.");
+    }
   };
 
   // Handler for confirming delete
   const handleDeleteConfirm = async () => {
-    await callApi(`/characters/${id}`, { method: 'DELETE' });
-    setShowDeleteModal(false);
-    setSessionData(prev => {
-      const updatedGamesList = [];
-      for (let i = 0; i < prev.user.games.length; i++) {
-        const g = prev.user.games[i];
-        const updatedPlayersList = [];
-        for (let j = 0; j < g.players.length; j++) {
-          const p = g.players[j];
-          const filteredChars = [];
-          for (let k = 0; k < p.characters.length; k++) {
-            const ch = p.characters[k];
-            if (ch.id !== id) {
-              filteredChars.push(ch);
-            }
-          }
-          updatedPlayersList.push({ ...p, characters: filteredChars });
-        }
-        updatedGamesList.push({ ...g, players: updatedPlayersList });
-      }
-      return {
+    try {
+      await callApi(`/characters/${id}`, { method: 'DELETE' });
+      // No error means success
+      setShowDeleteModal(false);
+      setSessionData(prev => ({
         ...prev,
-        user: { ...prev.user, games: updatedGamesList }
-      };
-    });
+        user: {
+          ...prev.user,
+          games: prev.user.games.map(game => ({
+            ...game,
+            players: game.players.map(player => ({
+              ...player,
+              characters: player.characters.filter(char => char.id !== id),
+            })),
+          })),
+        },
+      }));
+    } catch (error) {
+      console.error("API call failed during delete:", error);
+      alert("An error occurred while deleting the character. Please try again.");
+      // Optionally keep modal open or close it depending on desired UX for errors
+      // setShowDeleteModal(false);
+    }
   };
 
-  // Define the edit modal
   const editModal = showEditModal ? (
     <Modal isOpen onClose={() => setShowEditModal(false)}>
       <div style={{ padding: '1rem' }}>
-        <h3>Edit Character</h3>
+        <h3>Edit Character: {name}</h3>
         <form onSubmit={handleEditSubmit}>
-          <label>
-            Name:
-            <input value={editName} onChange={e => setEditName(e.target.value)} />
-          </label>
-          <label>
-            Class:
-            <input value={editClass} onChange={e => setEditClass(e.target.value)} />
-          </label>
-          <label>
-            Level:
-            <input
-              type="number"
-              value={editLevel}
-              onChange={e => setEditLevel(e.target.value)}
-            />
-          </label>
-          <label>
-            Icon URL:
-            <input value={editIcon} onChange={e => setEditIcon(e.target.value)} />
-          </label>
-          <label>
-            Active:
-            <input
-              type="checkbox"
-              checked={editActive}
-              onChange={e => setEditActive(e.target.checked)}
-            />
-          </label>
-          <button type="submit">Save</button>
-          <button type="button" onClick={() => setShowEditModal(false)}>
-            Cancel
-          </button>
+          <label htmlFor="editName">Name:</label>
+          <input id="editName" name="name" value={editForm.name} onChange={handleFormChange} required />
+          <br />
+          <label htmlFor="editClass">Class:</label>
+          <input id="editClass" name="characterClass" value={editForm.characterClass} onChange={handleFormChange} required />
+          <br />
+          <label htmlFor="editLevel">Level:</label>
+          <input
+            id="editLevel"
+            name="level"
+            type="number"
+            value={editForm.level}
+            onChange={handleFormChange}
+            required min="1"
+          />
+          <br />
+          <label htmlFor="editIcon">Icon URL:</label>
+          <input id="editIcon" name="icon" value={editForm.icon} onChange={handleFormChange} />
+          <br />
+          <label htmlFor="editActive">Active:</label>
+          <input
+            id="editActive"
+            name="isActive"
+            type="checkbox"
+            checked={editForm.isActive}
+            onChange={handleFormChange}
+          />
+          <br /><br />
+          <button type="submit">Save Changes</button>
+          <button type="button" onClick={() => setShowEditModal(false)}>Cancel</button>
         </form>
       </div>
     </Modal>
   ) : null;
 
-  // Define the delete modal
   const deleteModal = showDeleteModal ? (
     <Modal isOpen onClose={() => setShowDeleteModal(false)}>
       <div style={{ padding: '1rem' }}>
-        <p>
-          Are you sure you want to delete <strong>{name}</strong>?
-        </p>
-        <button onClick={handleDeleteConfirm}>Yes, delete</button>
-        <button onClick={() => setShowDeleteModal(false)}>Cancel</button>
+        <p>Are you sure you want to delete <strong>{name}</strong>?</p>
+        <button onClick={handleDeleteConfirm} style={{marginRight: "10px"}}>Yes, delete</button>
+        <button type="button" onClick={() => setShowDeleteModal(false)}>Cancel</button>
       </div>
     </Modal>
   ) : null;
@@ -162,9 +184,7 @@ export default function CharacterCard({ character }) {
       )}
       <div>
         <Link to={`/characters/${id}`}>{name}</Link>
-        <p>
-          {characterClass} L{level} — {isActive ? 'Active' : 'Inactive'}
-        </p>
+        <p>{characterClass} L{level} — {isActive ? 'Active' : 'Inactive'}</p>
       </div>
       <div>
         <button onClick={() => setShowEditModal(true)}>Edit</button>

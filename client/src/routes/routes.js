@@ -1,94 +1,51 @@
-import { useContext } from "react";
-import { SessionContext } from "../contexts/SessionContext";
-import { Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
+import App from "../App";
+import AuthPage from "../pages/AuthPage";
+import Login from "../components/Login";
+import Signup from "../components/Signup";
 import Dashboard from "../pages/Dashboard";
 import GamePage from "../pages/GamePage";
 import PlayerPage from "../pages/PlayerPage";
-import CharacterPage from "../pages/CharacterPage";
 import SessionPage from "../pages/SessionPage";
-import { Routes, Route } from "react-router-dom";
-import Login from "../components/Login";
-import Signup from "../components/Signup";
-import AuthPage from "../pages/AuthPage";
+import CharacterPage from "../pages/CharacterPage";
 import AllCharactersPage from "../pages/AllCharactersPage";
+import ErrorPage from "../components/ErrorPage";
 
-function AppRoutes() {
-  const { isAuthenticated, isSessionChecked } = useContext(SessionContext);
+import React, { useContext } from "react";
+import { Navigate } from "react-router-dom";
+import { SessionContext } from "../contexts/SessionContext";
 
-  if (!isSessionChecked) {
-    return <p>Loading...</p>;
-  }
-
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <AuthPage />}
-      />
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />}
-      />
-      <Route
-        path="/signup"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <Signup />}
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/games/:gameId"
-        element={
-          <ProtectedRoute>
-            <GamePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/players/:playerId"
-        element={
-          <ProtectedRoute>
-            <PlayerPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sessions/:sessionId"
-        element={
-          <ProtectedRoute>
-            <SessionPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/characters/:characterId"
-        element={
-          <ProtectedRoute>
-            <CharacterPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/characters"
-        element={
-          <ProtectedRoute>
-            <AllCharactersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="*"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : <AuthPage />
-        }
-      />
-    </Routes>
-  );
+// Wrapper that redirects authenticated users away from public pages
+function AuthRedirect({ children }) {
+  const { sessionData, isSessionChecked } = useContext(SessionContext);
+  if (!isSessionChecked) return null;  // or a spinner if you prefer
+  return sessionData.user ? <Navigate to="/dashboard" replace /> : children;
 }
-export default AppRoutes
+
+export const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      { index: true, element: <AuthRedirect><AuthPage /></AuthRedirect> },
+      { path: "login", element: <AuthRedirect><Login /></AuthRedirect> },
+      { path: "signup", element: <AuthRedirect><Signup /></AuthRedirect> },
+
+      // Protected pages
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: "dashboard", element: <Dashboard /> },
+          { path: "games/:gameId", element: <GamePage /> },
+          { path: "players/:playerId", element: <PlayerPage /> },
+          { path: "sessions/:sessionId", element: <SessionPage /> },
+          { path: "characters/:characterId", element: <CharacterPage /> },
+          { path: "characters", element: <AllCharactersPage /> },
+        ],
+      },
+
+      { path: "*", element: <ErrorPage /> },
+    ],
+  },
+]);

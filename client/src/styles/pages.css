@@ -6,6 +6,10 @@
   padding: 2rem;
 }
 
+.auth-page .auth-page {
+  background: none !important;
+}
+
 .game-page {
   background-image: url("../assets/game-bg.png");
   background-size: cover;

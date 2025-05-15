@@ -1,13 +1,14 @@
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './routes/routes';
 import SessionProvider from './contexts/SessionContext';
 //import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <SessionProvider>
-    <App />
+    <RouterProvider router={router} />
   </SessionProvider>
 );
 

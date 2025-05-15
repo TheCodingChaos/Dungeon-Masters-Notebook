@@ -1,6 +1,8 @@
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import validates
+from sqlalchemy import event
+import secrets
 
 # Ensure necessary imports
 from config import db, bcrypt
@@ -46,8 +48,22 @@ class Game(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     setting = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(50), nullable=False)
+    # is_sharable = db.Column(db.Boolean, default=False, nullable=False)
+    # share_token = db.Column(db.String(8), unique=True, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
+    # def generate_share_token(self):
+    #     self.share_token = secrets.token_urlsafe(6)[:8]
+
+    # @event.listens_for(Game, 'before_insert')
+    # @event.listens_for(Game, 'before_update')
+    # def _ensure_share_token(mapper, connection, target):
+    #     if target.is_sharable:
+    #         if not target.share_token:
+    #             target.generate_share_token()
+    #     else:
+    #         target.share_token = None
+    
     user = db.relationship(
         "User",
         back_populates="games",

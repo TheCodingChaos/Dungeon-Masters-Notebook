@@ -6,9 +6,16 @@
  */
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
 
+const API_PREFIX = "/api";
+
 export async function callApi(path, options = {}) {
+  // Ensure API routes are prefixed correctly, avoiding double slashes
+  let url = path;
+  if (!path.startsWith("http") && !path.startsWith(API_PREFIX)) {
+    url = `${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+  }
   const { headers: customHeaders = {}, ...otherOptions } = options;
-  const response = await fetch(`${BASE_URL}${path}`, {
+  const response = await fetch(`${BASE_URL}${url}`, {
     ...otherOptions,
     credentials: "include",
     headers: {

@@ -1,15 +1,16 @@
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { SessionContext } from "../contexts/SessionContext";
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute() {
   const { sessionData, isSessionChecked } = useContext(SessionContext);
-
-    if (!isSessionChecked) {
-      return <p>Loading...</p>;
-    }
-
-  return sessionData.user ? children : <Navigate replace to="/" />;
+  if (!isSessionChecked) {
+    return <p>Loading...</p>;
+  }
+  if (!sessionData.user) {
+    return <Navigate to="/" replace />;
+  }
+  return <Outlet />;
 }
 
 export default ProtectedRoute;

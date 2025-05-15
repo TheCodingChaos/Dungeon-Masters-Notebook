@@ -27,7 +27,7 @@ function NavBar() {
 
   // Handle user logout
   const handleLogout = () => {
-    fetch("/logout", { method: "DELETE", credentials: "include" })
+    fetch("/api/logout", { method: "DELETE", credentials: "include" })
       .then((r) => {
         if (r.ok) {
           setSessionData(prev => ({ ...prev, user: null }));

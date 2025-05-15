@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import callApi from "../utils/CallApi";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { SessionContext } from "../contexts/SessionContext";
@@ -33,6 +33,15 @@ function PlayerPage() {
   if (!player) {
     player = sessionData.user?.players?.find(p => p.id === parseInt(playerId, 10));
   }
+
+  useEffect(() => {
+    // guard against initial undefined state if you load player async
+    if (player === undefined) return;
+    if (!player) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [player, navigate]);
+
   // Offer all games for character assignment (to attach new characters)
   const gamesWithPlayer = games;
   // Modal open state and selected game for new character
@@ -76,7 +85,7 @@ function PlayerPage() {
 
   // Delete handler
   const handleDelete = async () => {
-    const res = await fetch(`/players/${player.id}`, {
+    const res = await fetch(`/api/players/${player.id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -266,14 +275,14 @@ function PlayerPage() {
                   const hasPlayer = existingPlayers.some(p => p.id === newChar.player_id);
                   const updatedPlayers = hasPlayer
                     ? existingPlayers.map(p =>
-                        p.id === newChar.player_id
-                          ? { ...p, characters: [...(p.characters || []), newChar] }
-                          : p
-                      )
+                      p.id === newChar.player_id
+                        ? { ...p, characters: [...(p.characters || []), newChar] }
+                        : p
+                    )
                     : [
-                        ...existingPlayers,
-                        { ...player, characters: [newChar] }
-                      ];
+                      ...existingPlayers,
+                      { ...player, characters: [newChar] }
+                    ];
                   return { ...g, players: updatedPlayers };
                 });
                 return { ...prev, user: { ...prev.user, games: updatedGames } };

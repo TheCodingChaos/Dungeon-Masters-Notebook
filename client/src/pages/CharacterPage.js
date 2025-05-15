@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Formik, Form } from "formik";
 import FormField from "../components/FormField";
@@ -48,6 +48,15 @@ function CharacterPage() {
   const char = foundCharacter;
   const parentPlayer = foundPlayer;
 
+  // after you locate `char`
+  useEffect(() => {
+    if (char === undefined) return;
+    if (!char) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [char, navigate]);
+  if (!char) return null;
+
   // Edit form initial values
   const editInitialValues = {
     name: char?.name || "",
@@ -87,7 +96,7 @@ function CharacterPage() {
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    const res = await fetch(`/characters/${char.id}`, {
+    const res = await fetch(`/api/characters/${char.id}`, {
       method: "DELETE",
       credentials: "include",
     });

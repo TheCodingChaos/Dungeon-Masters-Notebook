@@ -15,7 +15,7 @@ export default function SessionProvider({ children }) {
   // Function to check for an existing user session on page load
   async function initializeSession() {
     try {
-      const response = await fetch("/check_session", { credentials: "include" });
+      const response = await fetch("/api/check_session", { credentials: "include" });
 
       if (response.ok) {
         const user = await response.json();
