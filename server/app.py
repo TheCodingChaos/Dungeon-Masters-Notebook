@@ -21,8 +21,13 @@ def login_check():
     if request.method == 'OPTIONS':
         return
     open_paths = ['/signup', '/login', '/check_session', '/logout']
+    
+    if request.path == '/favicon.ico' or request.endpoint == 'static':
+        return
+
     if request.path in open_paths:
         return
+
     if not session.get('user_id'):
         return {'error': '401 unauthorized'}, 401
 
