@@ -69,6 +69,9 @@ ma = Marshmallow(app)
 
 @app.errorhandler(404)
 def not_found(e):
-    if request.accept_mimetypes.accept_json:
-        return {'error': 'Not found.'}, 404
-    return render_template("index.html")
+    # If the request accepts HTML, assume it's a frontend route.
+    # Serve index.html with a 200 OK status to let client-side router handle it.
+    if 'text/html' in request.accept_mimetypes:
+        return render_template("index.html"), 200
+    # Otherwise, it's likely an API call that wasn't found.
+    return {'error': 'Not found.'}, 404
