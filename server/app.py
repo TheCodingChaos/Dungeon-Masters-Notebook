@@ -20,7 +20,7 @@ characters_schema = CharacterSchema(many=True)
 def login_check():
     if request.method == 'OPTIONS':
         return
-    open_paths = ['/signup', '/login', '/check_session', '/logout']
+    open_paths = ['/', '/signup', '/login', '/check_session', '/logout']
     
     if request.path == '/favicon.ico' or request.endpoint == 'static':
         return
