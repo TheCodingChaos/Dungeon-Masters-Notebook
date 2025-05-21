@@ -4,9 +4,7 @@
  * @param {object} [options={}] - fetch options (method, headers, body, etc.).
  * @returns {Promise<any>} - resolved JSON response or throws on HTTP error.
  */
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://dungeon-masters-notebook-api.onrender.com'
-  : '';
+const BASE_URL = '';
 
 export async function callApi(path, options = {}) {
   const { headers: customHeaders = {}, ...otherOptions } = options;

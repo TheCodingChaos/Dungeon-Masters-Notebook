@@ -15,7 +15,6 @@ load_dotenv()
 is_prod = os.getenv('FLASK_ENV') == 'production'
 
 app = Flask(__name__,
-            static_url_path='',
             static_folder='../client/build',
             template_folder='../client/build'
             )

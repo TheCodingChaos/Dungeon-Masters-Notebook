@@ -1,4 +1,5 @@
-from flask import request, session
+from flask import request, session, render_template, send_from_directory
+import os
 from flask_restful import Resource, abort
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
@@ -376,6 +377,17 @@ api.add_resource(NewCharacter, '/players/<int:player_id>/characters')
 api.add_resource(EditCharacter, '/characters/<int:character_id>')
 api.add_resource(NewPlayerAndCharacter, '/games/<int:game_id>/players')
 # Removed RPC-style assignments endpoint; use POST /games instead
+
+# Serve React app for client-side routing and static assets
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react(path):
+    # if the requested path matches a file in the build directory, serve it
+    full_path = os.path.join(app.static_folder, path)
+    if path and os.path.exists(full_path):
+        return send_from_directory(app.static_folder, path)
+    # otherwise serve index.html for React routing
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
