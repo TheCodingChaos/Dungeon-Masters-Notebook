@@ -18,7 +18,7 @@ const NewPlayerSchema = Yup.object({
 
 function NavBar() {
   // Access session data and navigation
-  const { sessionData, setSessionData } = useContext(SessionContext);
+  const { sessionData, setSessionData, logout } = useContext(SessionContext);
   const user = sessionData.user;
   const navigate = useNavigate();
 
@@ -26,14 +26,9 @@ function NavBar() {
   const { gameOptions, playerOptions } = useSessionOptions();
 
   // Handle user logout
-  const handleLogout = () => {
-    fetch("/logout", { method: "DELETE", credentials: "include" })
-      .then((r) => {
-        if (r.ok) {
-          setSessionData(prev => ({ ...prev, user: null }));
-          navigate("/");
-        }
-      });
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
   };
 
   const [showNewPlayer, setShowNewPlayer] = useState(false);

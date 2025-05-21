@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from "react";
+import callApi from "../utils/CallApi";
 
 // Create the context object
 export const SessionContext = createContext(null);
@@ -12,14 +13,17 @@ export default function SessionProvider({ children }) {
   // Tracks whether the user is authenticated
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Update authentication state whenever sessionData changes
+  useEffect(() => {
+    setIsAuthenticated(!!sessionData.user);
+  }, [sessionData]);
+
   // Function to check for an existing user session on page load
   async function initializeSession() {
     try {
-      const response = await fetch("/check_session", { credentials: "include" });
-
-      if (response.ok) {
-        const user = await response.json();
-        setSessionData({ user });
+      const response = await callApi("/check_session");
+      if (response && !response.error) {
+        setSessionData({ user: response });
         setIsAuthenticated(true);
       } else {
         setSessionData({});
@@ -27,9 +31,11 @@ export default function SessionProvider({ children }) {
       }
     } catch (error) {
       console.error("Session initialization failed:", error);
+      setSessionData({});
       setIsAuthenticated(false);
+    } finally {
+      setIsSessionChecked(true);
     }
-    setIsSessionChecked(true);
   }
 
   // Check session on initial component mount
@@ -44,7 +50,22 @@ export default function SessionProvider({ children }) {
 
   // Provide session context to children
   return (
-    <SessionContext.Provider value={{ sessionData, setSessionData, isAuthenticated, isSessionChecked }}>
+    <SessionContext.Provider value={{ 
+      sessionData, 
+      setSessionData, 
+      isAuthenticated, 
+      isSessionChecked,
+      logout: async () => {
+        try {
+          await callApi("/logout", { method: "DELETE" });
+        } catch (error) {
+          console.error("Logout failed:", error);
+        } finally {
+          setSessionData({});
+          setIsAuthenticated(false);
+        }
+      }
+    }}>
       {children}
     </SessionContext.Provider>
   );
