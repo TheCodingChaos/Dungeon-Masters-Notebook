@@ -10,13 +10,27 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+# Determine if we're in production
+is_prod = os.getenv('FLASK_ENV') == 'production'
+
 app = Flask(__name__,
             static_url_path='',
             static_folder='../client/build',
             template_folder='../client/build'
             )
+
+# Configuration
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "dev_secret_key")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///app.db')
+
+# Database configuration
+if is_prod:
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
+    if not app.config['SQLALCHEMY_DATABASE_URI']:
+        raise ValueError("No DATABASE_URI set for Production environment")
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///app.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 app.config['SESSION_COOKIE_SECURE'] = True
@@ -33,7 +47,23 @@ bcrypt = Bcrypt(app)
 
 api = Api(app)
 
-CORS(app, supports_credentials=True, origins=["https://dungeon-masters-notebook.onrender.com"])
+# Configure CORS with environment-specific origins
+allowed_origins = [
+    "https://dungeon-masters-notebook.onrender.com",  # Production frontend
+]
+
+# Add development origins if not in production
+if not is_prod:
+    allowed_origins.extend([
+        "http://localhost:3000",
+        "http://localhost:5555",
+    ])
+
+CORS(app, 
+     supports_credentials=True, 
+     origins=allowed_origins,
+     allow_headers=["Content-Type", "Authorization"],
+     expose_headers=["Content-Type", "Authorization"])
 
 ma = Marshmallow(app)
 
